@@ -33,23 +33,26 @@ async function load() {
     .from("masonry")
     .select(
       "id,mortar_thickness,brick_id,mortar_id,paper(authors,year)," +
-        "masonry_type(title),brick(id,density,voidness,specific_perimeter," +
+        "masonry_type(title,description),brick(id,density,voidness,specific_perimeter," +
         "brick_type(title)),mortar(id,density,elastic_modulus,strain_ult," +
         "stress_ult)"
     )
     .eq("status", "approved")
     .order("id");
   if (error) throw error;
-  return data.map((r) => {
+  // «№» — сквозной номер по порядку: в отличие от id, не имеет дыр от отклонённых и удалённых заявок
+  return data.map((r, i) => {
     const p = r.paper || {},
       b = r.brick || {},
       m = r.mortar || {};
     return {
       id: r.id,
+      no: i + 1,
       brick_id: b.id,
       mortar_id: m.id,
       src: p.authors && p.year ? `${p.authors}, ${p.year}` : p.authors || p.year || "—",
       mtype: r.masonry_type?.title,
+      mdesc: r.masonry_type?.description,
       joint: r.mortar_thickness,
       btype: b.brick_type?.title,
       bdens: b.density,
@@ -99,8 +102,7 @@ function hero(rows) {
   const first = !sessionStorage.getItem("hero");
   sessionStorage.setItem("hero", 1);
   const n = (k) => new Set(rows.map((r) => r[k]).filter((v) => v && v !== "—")).size;
-  const stats = [
-  ];
+  const stats = [];
   return (
     `<section class="hero ${first ? "is-animated" : ""}"><div><h1>База экспериментов по каменной кладке</h1>
   <p>Результаты испытаний кирпича, раствора и кладки из научных статей.</p>
@@ -127,10 +129,10 @@ const kv = (t, c, rows) =>
 function renderRecord() {
   const r = cur();
   $("#rec").innerHTML =
-    `<div class="rec-head"><b>Запись #${r.id}</b><span>${esc(r.src)}` +
+    `<div class="rec-head"><b>Запись №${r.no}</b><span>${esc(r.src)}` +
     `</span></div>` +
     kv("Кладка", "var(--blue)", [
-      ["Тип", r.mtype],
+      ["Тип", r.mdesc ? `${r.mtype} — ${r.mdesc}` : r.mtype],
       ["Толщина шва", r.joint, "мм"],
     ]) +
     kv("Кирпич", "#c4573a", [
@@ -270,7 +272,7 @@ const view = () => {
   return state.rows.filter(
     (r) =>
       !q ||
-      ["id", ...COLS.map((c) => c[0])].some((k) =>
+      ["no", ...COLS.map((c) => c[0])].some((k) =>
         String(r[k] ?? "")
           .toLowerCase()
           .includes(q)
@@ -286,12 +288,12 @@ function renderTable() {
     (state.q.trim() ? ` — по запросу «${state.q.trim()}»` : "");
   $("#dl").disabled = !v.length;
   $("#tbl").innerHTML = v.length
-    ? `<thead><tr><th>ID</th>${cols.map((c) => `<th>${c[1]}</th>`).join("")}` +
+    ? `<thead><tr><th>№</th>${cols.map((c) => `<th>${c[1]}</th>`).join("")}` +
       `</tr></thead><tbody>${v
         .map(
           (r) =>
             `<tr data-id="${r.id}" class="${r.id === state.id ? "on" : ""}">` +
-            `<td>${r.id}</td>${cols.map((c) => `<td>${esc(r[c[0]])}</td>`).join("")}` +
+            `<td>${r.no}</td>${cols.map((c) => `<td>${esc(r[c[0]])}</td>`).join("")}` +
             `</tr>`
         )
         .join("")}` +
@@ -303,8 +305,8 @@ function downloadCsv() {
   const cols = shown(),
     q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = [
-    ["ID", ...cols.map((c) => c[1])],
-    ...view().map((r) => [r.id, ...cols.map((c) => r[c[0]])]),
+    ["№", ...cols.map((c) => c[1])],
+    ...view().map((r) => [r.no, ...cols.map((c) => r[c[0]])]),
   ]
     .map((l) => l.map(q).join(","))
     .join("\r\n");
@@ -325,7 +327,7 @@ function select(id, fromTable) {
   document.querySelector(`#tbl tr[data-id="${id}"]`)?.classList.add("on");
   if (fromTable) {
     scrollTo({ top: 0, behavior: "smooth" });
-    toast(`Запись #${id}: кривые и параметры обновлены наверху`);
+    toast(`Запись №${cur().no}: кривые и параметры обновлены наверху`);
   }
 }
 
@@ -351,7 +353,7 @@ async function init() {
     `<div class="grid"><div><label class="lbl">Запись<select id="sel">` +
     `${state.rows
       .map(
-        (r) => `<option value="${r.id}">#${r.id} — ${esc(r.mtype)} / ${esc(r.btype)}` + `</option>`
+        (r) => `<option value="${r.id}">№${r.no} — ${esc(r.mtype)} / ${esc(r.btype)}` + `</option>`
       )
       .join("")}` +
     `</select></label><div id="rec"></div></div>
