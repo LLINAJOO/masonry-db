@@ -5,6 +5,7 @@
 3. Деплой: загрузите папку целиком на Netlify / GitHub Pages / Vercel (сборка не нужна).
 
 4. **Один раз** выполните `sql/submit_experiment.sql` в Supabase → SQL Editor (сохранение заявки) и `sql/admin_review.sql` (одобрить/отклонить/удалить).
+5. Для фото и схем выполните `sql/images.sql` (таблица `masonry_image`, обновлённые `submit_experiment` и `admin_review`). Без него сайт работает, но картинки не сохраняются.
 
 Готово: каталог (`/`), форма заявки (`/add.html`), админ-панель (`/admin`, в меню её нет — только по адресу).
 Админ-вход: пользователь из Supabase → Authentication → Users.

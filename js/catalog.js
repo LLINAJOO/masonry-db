@@ -1,4 +1,4 @@
-import { sb, $, esc, shell, toast, parseCurve } from "./common.js";
+import { sb, $, esc, shell, toast, parseCurve, isDark } from "./common.js";
 shell("index.html", "Каталог экспериментов");
 
 const CLAY = [
@@ -25,7 +25,15 @@ const COLS = [
   ["mstrain", "Пред. деформация раствора", "Раствор"],
   ["mstress", "Пред. напряжение раствора", "Раствор"],
 ];
-const state = { rows: [], id: null, tab: "masonry", q: "", hidden: new Set() };
+const state = {
+  rows: [],
+  id: null,
+  tab: "overview",
+  sub: "masonry",
+  q: "",
+  type: "",
+  hidden: new Set(),
+};
 const cache = new Map();
 
 async function load() {
@@ -169,26 +177,42 @@ async function tests(kind, id) {
     );
   return cache.get(k);
 }
+const KIND_NAME = { masonry: "кладки", brick: "кирпича", mortar: "раствора" };
+// все кривые выбранного объекта (кладка / кирпич / раствор) в удобном виде
+async function curvesOf(kind) {
+  const r = cur(),
+    id = kind === "masonry" ? r.id : r[kind + "_id"];
+  if (!id) return null;
+  const out = [];
+  for (const t of await tests(kind, id))
+    for (const res of t[kind + "_test_result"] || []) {
+      const c = parseCurve(res.curve_content);
+      if (!c) continue;
+      const name = res.curve_filename || `Испытание ${out.length + 1}`;
+      out.push({
+        ...c,
+        name,
+        content: res.curve_content,
+        label: `${name}, ${t.standard?.title || "—"}, σ = ${t.stress_state ?? ""}, α = ${t.orientation ?? ""}°`,
+      });
+    }
+  return out;
+}
 let token = 0;
 async function drawPlot() {
   const my = ++token,
-    r = cur(),
-    kind = state.tab,
-    id = kind === "masonry" ? r.id : r[kind + "_id"],
+    kind = state.sub,
     el = $("#plot");
+  if (!el) return;
   try {
     Plotly.purge(el);
   } catch {} // сбрасываем прежний график, иначе повторная отрисовка в том же блоке ломается
   el.innerHTML = `<div class="note">Загрузка кривых…</div>`;
-  if (!id) {
-    el.innerHTML = `<div class="note">Для этой записи ${kind === "brick" ? "кирпич" : "раствор"} не указан.</div>`;
-    return;
-  }
-  let ts;
+  let cv;
   try {
-    ts = await tests(kind, id);
+    cv = await curvesOf(kind);
   } catch (e) {
-    cache.delete(kind + id);
+    cache.delete(kind + cur().id);
     if (my === token)
       el.innerHTML =
         `<div class="note">Не удалось загрузить кривые: ${esc(e.message)}` +
@@ -196,36 +220,33 @@ async function drawPlot() {
     return;
   }
   if (my !== token) return;
+  if (!cv) {
+    el.innerHTML = `<div class="note">Для этой записи ${kind === "brick" ? "кирпич" : "раствор"} не указан.</div>`;
+    return;
+  }
   if (typeof Plotly === "undefined") {
     el.innerHTML = `<div class="note">Не загрузилась библиотека графиков Plotly. Проверьте интернет или блокировщик рекламы.</div>`;
     return;
   }
-  const dark = matchMedia("(prefers-color-scheme:dark)").matches,
-    fg = getComputedStyle(document.body).color;
-  const colors = dark
+  const fg = getComputedStyle(document.body).color;
+  const colors = isDark()
     ? ["#e05a3c", "#4a88d6", "#b8850c", "#a674d4", "#3aa86b"]
     : ["#c2452d", "#2f6db5", "#a87700", "#8a4fb0", "#2f8a55"];
-  const traces = [];
-  for (const t of ts)
-    for (const res of t[kind + "_test_result"] || []) {
-      const c = parseCurve(res.curve_content);
-      if (!c) continue;
-      const name = res.curve_filename || `Испытание ${traces.length + 1}`;
-      traces.push({
-        ...c,
-        type: "scatter",
-        mode: "lines",
-        line: { width: 2.2, shape: "spline", smoothing: 0.4 },
-        name: `${name}, ${t.standard?.title || "—"}, σ = ${t.stress_state ?? ""}, α = ${t.orientation ?? ""}°`,
-        hovertemplate: `Перемещение: %{x:.2f} мм<br>Сила: %{y:.2f} кН<extra>${name}` + `</extra>`,
-      });
-    }
+  const traces = cv.map((c) => ({
+    x: c.x,
+    y: c.y,
+    type: "scatter",
+    mode: "lines",
+    line: { width: 2.2, shape: "spline", smoothing: 0.4 },
+    name: c.label,
+    hovertemplate: `Перемещение: %{x:.2f} мм<br>Сила: %{y:.2f} кН<extra>${esc(c.name)}</extra>`,
+  }));
   el.innerHTML = "";
   Plotly.newPlot(
     el,
     traces,
     {
-      height: 380,
+      height: 460,
       colorway: colors,
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
@@ -266,17 +287,174 @@ async function drawPlot() {
   );
 }
 
+// ---------- фото кладки и схемы испытаний ----------
+const imgCache = new Map();
+function imagesOf(id) {
+  if (!imgCache.has(id))
+    imgCache.set(
+      id,
+      sb
+        .from("masonry_image")
+        .select("id,kind,filename,data")
+        .eq("masonry_id", id)
+        .order("id")
+        .then((r) => {
+          if (r.error) throw r.error;
+          return r.data || [];
+        })
+    );
+  return imgCache.get(id);
+}
+async function drawGallery(kind, text) {
+  const el = $("#gal"),
+    id = state.id;
+  el.innerHTML = `<div class="note">Загрузка изображений…</div>`;
+  let list;
+  try {
+    list = (await imagesOf(id)).filter((i) => i.kind === kind);
+  } catch (e) {
+    imgCache.delete(id);
+    if (id === state.id)
+      el.innerHTML = `<div class="note">Не удалось загрузить изображения: ${esc(e.message)}</div>`;
+    return;
+  }
+  if (id !== state.id) return;
+  el.innerHTML = list.length
+    ? `<div class="gallery">${list
+        .map(
+          (i) =>
+            `<figure><button class="thumb" data-img="${i.id}" title="Открыть крупно">` +
+            `<img src="${i.data}" alt="${esc(i.filename, text)}" loading="lazy"></button>` +
+            `<figcaption>${esc(i.filename)}</figcaption></figure>`
+        )
+        .join("")}</div>`
+    : `<div class="empty"><h3>Изображений нет</h3>Для этой записи ${text} не загружены.</div>`;
+  el.onclick = (e) => {
+    const b = e.target.closest("[data-img]");
+    if (!b) return;
+    const im = list.find((x) => x.id === +b.dataset.img);
+    const box = Object.assign(document.createElement("div"), { className: "lightbox" });
+    box.innerHTML = `<img src="${im.data}" alt=""><span>${esc(im.filename, "")}</span>`;
+    box.onclick = () => box.remove();
+    document.body.append(box);
+  };
+}
+
+// ---------- вкладка «Данные» ----------
+function saveText(name, text) {
+  const a = Object.assign(document.createElement("a"), {
+    href: URL.createObjectURL(new Blob(["\ufeff" + text], { type: "text/csv" })),
+    download: name,
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+async function drawData() {
+  const el = $("#dat"),
+    r = cur();
+  el.innerHTML = `<div class="note">Загрузка…</div>`;
+  let html = "";
+  try {
+    for (const k of ["masonry", "brick", "mortar"]) {
+      const cv = await curvesOf(k);
+      html +=
+        `<h4 class="subh">Кривые ${KIND_NAME[k]}</h4>` +
+        (cv && cv.length
+          ? cv
+              .map(
+                (c, i) =>
+                  `<div class="drow"><span>${esc(c.label)}</span>` +
+                  `<button class="btn" data-dl="${k}:${i}">Скачать CSV</button></div>`
+              )
+              .join("")
+          : `<p class="hint">Нет загруженных кривых.</p>`);
+    }
+  } catch (e) {
+    el.innerHTML = `<div class="note">Не удалось загрузить данные: ${esc(e.message)}</div>`;
+    return;
+  }
+  if (r.id !== state.id) return;
+  el.innerHTML =
+    `<div class="drow"><span><b>Параметры записи №${r.no}</b> (кладка, кирпич, раствор)</span>` +
+    `<button class="btn primary" data-dl="params">Скачать CSV</button></div>` +
+    html;
+  el.onclick = async (e) => {
+    const b = e.target.closest("[data-dl]");
+    if (!b) return;
+    if (b.dataset.dl === "params") {
+      const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      saveText(
+        `record_${r.no}.csv`,
+        [["Параметр", "Значение"], ...COLS.map((c) => [c[1], r[c[0]]])]
+          .map((l) => l.map(q).join(","))
+          .join("\r\n")
+      );
+    } else {
+      const [k, i] = b.dataset.dl.split(":");
+      const c = (await curvesOf(k))[+i];
+      saveText(c.name.replace(/\.csv$/i, "") + ".csv", c.content);
+    }
+  };
+}
+
+// ---------- вкладки просмотра записи ----------
+const TABS = [
+  ["overview", "Обзор"],
+  ["plot", "График F–Δ"],
+  ["photo", "Фото кладки"],
+  ["scheme", "Схема испытания"],
+  ["data", "Данные"],
+];
+function renderTab() {
+  const t = state.tab,
+    pane = $("#pane");
+  document
+    .querySelectorAll("#vtabs button")
+    .forEach((b) => b.classList.toggle("on", b.dataset.t === t));
+  token++; // отменяем незавершённую отрисовку графика
+  if (t === "overview") {
+    pane.innerHTML = `<div id="rec"></div>`;
+    renderRecord();
+  } else if (t === "plot") {
+    pane.innerHTML = `<div class="seg" id="sub">${[
+      ["masonry", "Кладка"],
+      ["brick", "Кирпич"],
+      ["mortar", "Раствор"],
+    ]
+      .map(([k, n]) => `<button data-s="${k}" class="${k === state.sub ? "on" : ""}">${n}</button>`)
+      .join("")}</div><div id="plot"></div>`;
+    $("#sub").onclick = (e) => {
+      const b = e.target.closest("[data-s]");
+      if (!b) return;
+      state.sub = b.dataset.s;
+      document.querySelectorAll("#sub button").forEach((x) => x.classList.toggle("on", x === b));
+      drawPlot();
+    };
+    drawPlot();
+  } else if (t === "data") {
+    pane.innerHTML = `<div id="dat"></div>`;
+    drawData();
+  } else {
+    pane.innerHTML = `<div id="gal"></div>`;
+    drawGallery(
+      t === "photo" ? "masonry" : "scheme",
+      t === "photo" ? "фото кладки" : "схемы испытания"
+    );
+  }
+}
+
 // ---------- таблица ----------
 const view = () => {
   const q = state.q.trim().toLowerCase();
   return state.rows.filter(
     (r) =>
-      !q ||
-      ["no", ...COLS.map((c) => c[0])].some((k) =>
-        String(r[k] ?? "")
-          .toLowerCase()
-          .includes(q)
-      )
+      (!state.type || r.mtype === state.type) &&
+      (!q ||
+        ["no", ...COLS.map((c) => c[0])].some((k) =>
+          String(r[k] ?? "")
+            .toLowerCase()
+            .includes(q)
+        ))
   );
 };
 const shown = () => COLS.filter((c) => !state.hidden.has(c[0]));
@@ -285,7 +463,8 @@ function renderTable() {
     cols = shown();
   $("#cap").textContent =
     `Показано ${v.length} из ${state.rows.length}` +
-    (state.q.trim() ? ` — по запросу «${state.q.trim()}»` : "");
+    (state.q.trim() ? ` — по запросу «${state.q.trim()}»` : "") +
+    (state.type ? ` — тип ${state.type}` : "");
   $("#dl").disabled = !v.length;
   $("#tbl").innerHTML = v.length
     ? `<thead><tr><th>№</th>${cols.map((c) => `<th>${c[1]}</th>`).join("")}` +
@@ -321,13 +500,12 @@ function downloadCsv() {
 function select(id, fromTable) {
   state.id = id;
   $("#sel").value = id;
-  renderRecord();
-  drawPlot();
+  renderTab();
   document.querySelectorAll("#tbl tr.on").forEach((t) => t.classList.remove("on"));
   document.querySelector(`#tbl tr[data-id="${id}"]`)?.classList.add("on");
   if (fromTable) {
-    scrollTo({ top: 0, behavior: "smooth" });
-    toast(`Запись №${cur().no}: кривые и параметры обновлены наверху`);
+    $("#viewer").scrollIntoView({ behavior: "smooth", block: "start" });
+    toast(`Открыта запись №${cur().no}`);
   }
 }
 
@@ -350,24 +528,23 @@ async function init() {
   state.id = state.rows[0].id;
   main.innerHTML =
     hero(state.rows) +
-    `<div class="grid"><div><label class="lbl">Запись<select id="sel">` +
+    `<section class="viewer" id="viewer"><label class="lbl">Запись<select id="sel">` +
     `${state.rows
       .map(
         (r) => `<option value="${r.id}">№${r.no} — ${esc(r.mtype)} / ${esc(r.btype)}` + `</option>`
       )
       .join("")}` +
-    `</select></label><div id="rec"></div></div>
-  <div><div class="tabs">` +
-    `${[
-      ["masonry", "Кладка"],
-      ["brick", "Кирпич"],
-      ["mortar", "Раствор"],
-    ]
-      .map(([k, t], i) => `<button data-t="${k}" class="${i ? "" : "on"}">${t}</button>`)
-      .join("")}` +
-    `</div><div id="plot"></div></div></div>
-  <h3 class="sec">Все записи</h3>` +
-    `<p class="hint">Нажмите на строку, чтобы посмотреть её кривые. Поиск ищет по всем столбцам.</p>
+    `</select></label><div class="tabs" id="vtabs">` +
+    `${TABS.map(([k, t]) => `<button data-t="${k}">${t}</button>`).join("")}` +
+    `</div><div id="pane"></div></section>
+    <h3 class="sec">Все записи</h3>` +
+    `<p class="hint">Нажмите на строку, чтобы открыть запись. Поиск ищет по всем столбцам.</p>
+  <div class="chips" id="types">` +
+    `<button data-ty="" class="on">Все типы</button>${[...new Set(state.rows.map((r) => r.mtype))]
+      .filter(Boolean)
+      .sort()
+      .map((t) => `<button data-ty="${esc(t)}">${esc(t)}</button>`)
+      .join("")}</div>
   <div class="bar">` +
     `<input id="q" type="search" placeholder="Автор, год, тип кирпича или кладки…">` +
     `<details class="pop"><summary>Столбцы</summary><div class="menu">` +
@@ -387,14 +564,20 @@ async function init() {
   <p id="cap" class="hint"></p><div class="tw"><table id="tbl">` +
     `</table></div>`;
   $("#sel").onchange = (e) => select(+e.target.value);
-  document.querySelectorAll(".tabs button").forEach(
-    (b) =>
-      (b.onclick = () => {
-        state.tab = b.dataset.t;
-        document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("on", x === b));
-        drawPlot();
-      })
-  );
+  $("#vtabs").onclick = (e) => {
+    const b = e.target.closest("[data-t]");
+    if (!b) return;
+    state.tab = b.dataset.t;
+    renderTab();
+  };
+  $("#types").onclick = (e) => {
+    const b = e.target.closest("[data-ty]");
+    if (!b) return;
+    state.type = b.dataset.ty;
+    document.querySelectorAll("#types button").forEach((x) => x.classList.toggle("on", x === b));
+    renderTable();
+  };
+  addEventListener("themechange", () => state.tab === "plot" && drawPlot());
   $("#q").oninput = (e) => {
     state.q = e.target.value;
     renderTable();
@@ -411,8 +594,7 @@ async function init() {
     if (tr) select(+tr.dataset.id, true);
   };
   $("#dl").onclick = downloadCsv;
-  renderRecord();
+  renderTab();
   renderTable();
-  drawPlot();
 }
 init();
