@@ -8,6 +8,26 @@ export const esc = (v, e = "—") =>
         /[&<>"']/g,
         (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
       );
+// ---------- тема: светлая / тёмная, по умолчанию как в системе ----------
+const getTheme = () => {
+  try {
+    const t = localStorage.getItem("theme");
+    if (t === "light" || t === "dark") return t;
+  } catch {}
+  return matchMedia("(prefers-color-scheme:dark)").matches ? "dark" : "light";
+};
+export const isDark = () => document.documentElement.dataset.theme === "dark";
+function applyTheme(t, save) {
+  document.documentElement.dataset.theme = t;
+  if (save)
+    try {
+      localStorage.setItem("theme", t);
+    } catch {}
+  const b = $("[data-theme-btn]");
+  if (b) b.innerHTML = t === "dark" ? "☀&nbsp; Светлая тема" : "☾&nbsp; Тёмная тема";
+  dispatchEvent(new Event("themechange"));
+}
+applyTheme(getTheme());
 const ROOT = new URL("../", import.meta.url).href; // работает и из /admin/, и из подпапки хостинга
 const NAV = [
   ["index.html", "Каталог экспериментов", "⛏"],
@@ -28,9 +48,12 @@ export function shell(page, title) {
       ([h, t, i]) =>
         `<a class="nav${h === page ? " on" : ""}" href="${ROOT}${h}">` + `${i}&nbsp; ${t}</a>`
     ).join("") +
+    `<button class="nav" data-theme-btn title="Переключить тему"></button>` +
     `<button class="nav" data-nav title="Скрыть боковую панель">‹&nbsp; Скрыть панель</button>` +
     `</div>`;
   initNav();
+  applyTheme(getTheme());
+  $("[data-theme-btn]").onclick = () => applyTheme(isDark() ? "light" : "dark", true);
 }
 function initNav() {
   if ($(".navbtn")) return;

@@ -59,6 +59,43 @@ function parseBib(t) {
   };
 }
 
+// картинка сжимается в браузере: до 1600 px по длинной стороне, JPEG ~0.82
+async function shrink(f) {
+  const bmp = await createImageBitmap(f);
+  const k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+  const c = Object.assign(document.createElement("canvas"), {
+    width: Math.round(bmp.width * k),
+    height: Math.round(bmp.height * k),
+  });
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff";
+  g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  let out;
+  for (const q of [0.82, 0.7, 0.55, 0.4]) {
+    out = c.toDataURL("image/jpeg", q);
+    if (out.length < 850000) break; // лимит на стороне базы — 900 000 символов
+  }
+  return out;
+}
+const IMG_LIMIT = 10;
+const imgBlock = (base, kind, title, hint) => {
+  const list = getP(base + ".images") || [];
+  const mine = list.map((im, i) => [im, i]).filter(([im]) => im.kind === kind);
+  return (
+    `<div class="imgs"><h5>${title}</h5><p class="hint">${hint}</p>` +
+    `<div class="gallery">${mine
+      .map(
+        ([im, i]) =>
+          `<figure><img src="${im.data}" alt=""><figcaption>${esc(im.filename)}</figcaption>` +
+          `<button type="button" class="lnk" data-a="delimg" data-p="${base}.images" data-i="${i}">Убрать</button></figure>`
+      )
+      .join("")}</div>` +
+    `<label class="btn upl">+ Добавить изображения<input type="file" accept="image/*" multiple hidden` +
+    ` data-img="${base}.images" data-kind="${kind}"></label></div>`
+  );
+};
+
 // ---------- состояние (черновик живёт в браузере до отправки) ----------
 let R,
   D,
@@ -68,7 +105,13 @@ const mk = {
   tests: () => ({ result: {} }),
   bricks: () => ({ type_id: R.bt[0]?.[0], tests: [mk.tests()] }),
   mortars: () => ({ tests: [mk.tests()] }),
-  masonries: () => ({ brick_i: 0, mortar_i: 0, type_id: R.mt[0]?.[0], tests: [mk.tests()] }),
+  masonries: () => ({
+    brick_i: 0,
+    mortar_i: 0,
+    type_id: R.mt[0]?.[0],
+    tests: [mk.tests()],
+    images: [],
+  }),
 };
 const fresh = () =>
   (D = {
@@ -210,7 +253,9 @@ const VIEWS = [
           D.mortars.map((m, i) => [i, mLabel(m, i)])
         ) +
         sel(p + ".type_id", "Тип кладки *", R.mt) +
-        inp(p + ".mortar_thickness", "Толщина шва (мм)", { i: 1, s: 1, max: 99 })
+        inp(p + ".mortar_thickness", "Толщина шва (мм)", { i: 1, s: 1, max: 99 }) +
+        `<div class="span2">${imgBlock(p, "masonry", "Фото кладки", "Общий вид образца, можно несколько снимков.")}` +
+        `${imgBlock(p, "scheme", "Схема испытания", "Схема нагружения, установка, расположение датчиков.")}</div>`
     ),
 ];
 const TITLES = ["Статья", "Кирпич", "Раствор", "Кладка"];
@@ -280,6 +325,7 @@ async function send() {
       type_id: m.type_id,
       mortar_thickness: m.mortar_thickness,
       tests: m.tests,
+      images: m.images || [],
     })),
   };
   const body = JSON.parse(
@@ -316,6 +362,21 @@ document.addEventListener("change", async (e) => {
   const t = e.target,
     f = t.files?.[0];
   if (!f) return;
+  if (t.dataset.img) {
+    const arr = getP(t.dataset.img);
+    for (const file of t.files) {
+      if (arr.length >= IMG_LIMIT * 2) return toast("Слишком много изображений");
+      if (arr.filter((x) => x.kind === t.dataset.kind).length >= IMG_LIMIT)
+        return toast(`Не больше ${IMG_LIMIT} изображений в одной группе`);
+      try {
+        arr.push({ kind: t.dataset.kind, filename: file.name, data: await shrink(file) });
+      } catch {
+        toast(`Не удалось прочитать «${file.name}» как изображение`);
+      }
+    }
+    render();
+    return;
+  }
   if ("bib" in t.dataset) {
     const bib = await rd(f);
     D.paper = { ...parseBib(bib), bib_filename: f.name, bib_content: bib };
@@ -342,6 +403,9 @@ document.addEventListener("click", (e) => {
     const f = { bricks: "brick_i", mortars: "mortar_i" }[ks[0]];
     if (f && ks.length === 1)
       D.masonries.forEach((m) => (m[f] = m[f] === i ? 0 : m[f] > i ? m[f] - 1 : m[f]));
+    render();
+  } else if (a === "delimg") {
+    getP(p).splice(+b.dataset.i, 1);
     render();
   } else if (a === "go") go(+b.dataset.to);
   else if (a === "send") send();

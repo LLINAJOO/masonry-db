@@ -1,4 +1,4 @@
-import { sb, $, esc, shell, toast, parseCurve } from "./common.js";
+import { sb, $, esc, shell, toast, parseCurve, isDark } from "./common.js";
 
 shell("", "Панель администратора");
 
@@ -373,6 +373,29 @@ async function loadRequest(details) {
     return;
   }
   body.innerHTML = requestBody(data);
+  // картинки грузим отдельно: если таблица ещё не создана, остальная заявка всё равно откроется
+  const imgs = await sb
+    .from("masonry_image")
+    .select("id,kind,filename,data")
+    .eq("masonry_id", data.id)
+    .order("id");
+  if (imgs.error || !imgs.data?.length) return;
+  const group = (kind, title) => {
+    const list = imgs.data.filter((i) => i.kind === kind);
+    return list.length
+      ? `<div class="tt">${title}</div><div class="gallery">${list
+          .map(
+            (i) =>
+              `<figure><a href="${i.data}" target="_blank" rel="noopener"><img src="${i.data}" alt="">` +
+              `</a><figcaption>${esc(i.filename)}</figcaption></figure>`
+          )
+          .join("")}</div>`
+      : "";
+  };
+  body.insertAdjacentHTML(
+    "beforeend",
+    group("masonry", "Фото кладки") + group("scheme", "Схемы испытания")
+  );
 }
 
 function drawCurve(details) {
@@ -388,7 +411,7 @@ function drawCurve(details) {
     return;
   }
 
-  const dark = matchMedia("(prefers-color-scheme:dark)").matches;
+  const dark = isDark();
   const grid = "rgba(128,128,128,.18)";
   Plotly.newPlot(
     target,
