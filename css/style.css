@@ -1346,3 +1346,91 @@ a.nav.add {
   color: var(--fg);
   display: inline-block;
 }
+
+/* ===== Тумблер темы и футер ===== */
+.themerow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0.5rem 0.8rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.themerow > span:first-child {
+  flex: 1;
+}
+.tg-ico {
+  font-size: 0.95rem;
+}
+.tgl {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--soft2);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.25s var(--ease);
+}
+.tgl i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--brick);
+  transition: transform 0.3s var(--spring);
+}
+.tgl[aria-checked="true"] {
+  background: color-mix(in srgb, var(--brick) 28%, transparent);
+}
+.tgl[aria-checked="true"] i {
+  transform: translateX(20px);
+}
+.tgl:focus-visible {
+  outline: 2px solid var(--brick);
+  outline-offset: 2px;
+}
+.foot {
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  padding: 22px 2.4rem;
+}
+.foot-in {
+  max-width: 1480px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 40px;
+  align-items: center;
+  justify-content: space-between;
+}
+.foot b {
+  display: block;
+  font-family: Jura, sans-serif;
+}
+.foot span,
+.foot small {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+.foot nav a {
+  color: var(--fg);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+.foot nav a:hover {
+  color: var(--brick);
+}
+@media (max-width: 900px) {
+  .foot {
+    padding: 18px 1rem;
+  }
+}
