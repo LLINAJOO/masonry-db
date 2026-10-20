@@ -24,7 +24,7 @@ function applyTheme(t, save) {
       localStorage.setItem("theme", t);
     } catch {}
   const b = $("[data-theme-btn]");
-  if (b) b.innerHTML = t === "dark" ? "☀&nbsp; Светлая тема" : "☾&nbsp; Тёмная тема";
+  if (b) b.setAttribute("aria-checked", t === "dark");
   dispatchEvent(new Event("themechange"));
 }
 applyTheme(getTheme());
@@ -51,12 +51,26 @@ export function shell(page, title) {
         `<a class="nav${h === page ? " on" : ""}" href="${ROOT}${h}">` + `${i}&nbsp; ${t}</a>`
     ).join("") +
     `<a class="nav add${page === "add.html" ? " on" : ""}" href="${ROOT}add.html">＋&nbsp; Добавить эксперимент</a>` +
-    `<button class="nav" data-theme-btn title="Переключить тему"></button>` +
+    `<div class="themerow"><span>Тема</span><span class="tg-ico">☀</span>` +
+    `<button class="tgl" role="switch" data-theme-btn aria-label="Тёмная тема" title="Переключить тему">` +
+    `<i></i></button><span class="tg-ico">☾</span></div>` +
     `<button class="nav" data-nav title="Скрыть боковую панель">‹&nbsp; Скрыть панель</button>` +
     `</div>`;
   initNav();
+  footer();
   applyTheme(getTheme());
   $("[data-theme-btn]").onclick = () => applyTheme(isDark() ? "light" : "dark", true);
+}
+function footer() {
+  if ($(".foot")) return;
+  const f = document.createElement("footer");
+  f.className = "foot";
+  f.innerHTML =
+    `<div class="foot-in"><div><b>Каменная кладка</b><span>экспериментальная база данных</span></div>` +
+    `<nav>${NAV.map(([h, t]) => `<a href="${ROOT}${h}">${t}</a>`).join("")}` +
+    `<a href="${ROOT}add.html">Добавить эксперимент</a></nav>` +
+    `<small>Данные из открытых научных публикаций · © ${new Date().getFullYear()}</small></div>`;
+  document.body.append(f);
 }
 function initNav() {
   if ($(".navbtn")) return;
