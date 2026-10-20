@@ -2,7 +2,7 @@ import { $, esc, shell, isDark } from "./common.js";
 import { load } from "./data.js";
 shell("overview.html", "Обзор базы");
 
-const PALETTE_L = ["#2f6db5", "#c2452d", "#a87700", "#8a4fb0", "#2f8a55", "#5b6770"];
+const PALETTE_L = ["#2f6db5", "#cc6c5c", "#a87700", "#8a4fb0", "#2f8a55", "#5b6770"];
 const PALETTE_D = ["#4a88d6", "#e05a3c", "#c99a22", "#a674d4", "#3aa86b", "#9aa5b1"];
 const state = { rows: [], types: new Set(), bricks: new Set(), minJoint: 0 };
 
@@ -102,7 +102,7 @@ function draw() {
       margin: { l: 50, r: 50, t: 60, b: 20 },
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
-      font: { family: "IBM Plex Sans", color: getComputedStyle(document.body).color },
+      font: { family: "Inter", color: getComputedStyle(document.body).color },
     },
     { responsive: true, displayModeBar: false }
   );
