@@ -1,9 +1,9 @@
 /* ===== Переменные темы (светлая / тёмная) ===== */
 :root {
   --bg: #f6f7f8;
-  --fg: #1c2229;
+  --fg: #343a40;
   --panel: #eceef1;
-  --brick: #b8432a;
+  --brick: #cc6c5c;
   --ok: #2f8a55;
   --wait: #a87700;
   --bad: #c0392b;
@@ -23,7 +23,7 @@
   --bg: #13171c;
   --fg: #e6e9ed;
   --panel: #1d232b;
-  --brick: #e05a3c;
+  --brick: #e0806d;
   --ok: #3aa86b;
   --wait: #c99a22;
   --bad: #ef6a5a;
@@ -35,7 +35,7 @@
     --bg: #13171c;
     --fg: #e6e9ed;
     --panel: #1d232b;
-    --brick: #e05a3c;
+    --brick: #e0806d;
     --ok: #3aa86b;
     --wait: #c99a22;
     --bad: #ef6a5a;
@@ -51,14 +51,18 @@ body {
   background: var(--bg);
   color: var(--fg);
   font:
-    15px/1.5 "IBM Plex Sans",
+    15px/1.5 Inter,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Arial,
     sans-serif;
 }
 h1,
 h2,
 h3,
 .brand__name {
-  font-family: Jura, sans-serif;
+  font-family: inherit;
   letter-spacing: -0.01em;
 }
 /* ===== Каркас страницы и боковая панель ===== */
@@ -190,7 +194,8 @@ aside a.nav.on {
 }
 .stat .count {
   font:
-    700 1.85rem/1.1 Jura,
+    700 1.85rem/1.1 Inter,
+    system-ui,
     sans-serif;
   color: var(--brick);
 }
@@ -237,7 +242,10 @@ aside a.nav.on {
 }
 .w-label {
   fill: #fff;
-  font: 600 13px "IBM Plex Sans";
+  font:
+    600 13px Inter,
+    system-ui,
+    sans-serif;
   opacity: 0.9;
 }
 .is-animated .w-brick {
@@ -377,7 +385,8 @@ summary {
 }
 .rec-head b {
   font:
-    700 1.4rem Jura,
+    700 1.4rem Inter,
+    system-ui,
     sans-serif;
 }
 .rec-head span {
@@ -403,7 +412,8 @@ summary {
 }
 .kv h4 {
   font:
-    700 1rem Jura,
+    700 1rem Inter,
+    system-ui,
     sans-serif;
   margin: 0 0 8px;
 }
@@ -720,6 +730,9 @@ aside {
 }
 .aside-in {
   width: 238px;
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 44px);
 }
 button.nav {
   width: 100%;
@@ -771,6 +784,7 @@ body.nav-off main {
 @media (max-width: 900px) {
   .aside-in {
     width: auto;
+    min-height: 0;
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
@@ -779,6 +793,11 @@ body.nav-off main {
   button.nav {
     width: auto;
     margin: 0;
+  }
+  .themerow {
+    margin-top: 0;
+    border-top: 0;
+    padding: 0.2rem 0.5rem;
   }
   body.nav-off aside {
     display: none;
@@ -894,7 +913,8 @@ main > h1 {
 .chead h5 {
   margin: 0;
   font:
-    700 1.05rem Jura,
+    700 1.05rem Inter,
+    system-ui,
     sans-serif;
 }
 .g2,
@@ -1044,7 +1064,8 @@ main > h1 {
 .tile b {
   display: block;
   font:
-    700 2rem/1.1 Jura,
+    700 2rem/1.1 Inter,
+    system-ui,
     sans-serif;
   color: var(--c);
 }
@@ -1061,7 +1082,8 @@ main > h1 {
 }
 .req-head b {
   font:
-    700 1.2rem Jura,
+    700 1.2rem Inter,
+    system-ui,
     sans-serif;
 }
 .req-head span {
@@ -1121,7 +1143,8 @@ details.d pre {
 }
 .tt {
   font:
-    700 1rem Jura,
+    700 1rem Inter,
+    system-ui,
     sans-serif;
   margin: 16px 0 6px;
 }
@@ -1199,7 +1222,8 @@ details.req[open] > summary.rsum {
   flex: none;
   min-width: 48px;
   font:
-    700 1.25rem Jura,
+    700 1.25rem Inter,
+    system-ui,
     sans-serif;
   color: var(--brick);
 }
@@ -1326,7 +1350,8 @@ details.req[open] > summary.rsum {
 .stats2 b {
   display: block;
   font:
-    600 1.9rem Jura,
+    600 1.9rem Inter,
+    system-ui,
     sans-serif;
   color: var(--brick);
 }
@@ -1351,13 +1376,12 @@ a.nav.add {
 .themerow {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0.5rem 0.8rem;
+  justify-content: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 0.8rem;
+  border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 0.95rem;
-}
-.themerow > span:first-child {
-  flex: 1;
 }
 .tg-ico {
   font-size: 0.95rem;
@@ -1409,7 +1433,7 @@ a.nav.add {
 }
 .foot b {
   display: block;
-  font-family: Jura, sans-serif;
+  font-family: inherit;
 }
 .foot span,
 .foot small {

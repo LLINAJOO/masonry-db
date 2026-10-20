@@ -179,8 +179,8 @@ async function drawPlot() {
   }
   const fg = getComputedStyle(document.body).color;
   const colors = isDark()
-    ? ["#e05a3c", "#4a88d6", "#b8850c", "#a674d4", "#3aa86b"]
-    : ["#c2452d", "#2f6db5", "#a87700", "#8a4fb0", "#2f8a55"];
+    ? ["#e0806d", "#4a88d6", "#b8850c", "#a674d4", "#3aa86b"]
+    : ["#cc6c5c", "#2f6db5", "#a87700", "#8a4fb0", "#2f8a55"];
   const traces = cv.map((c) => ({
     x: c.x,
     y: c.y,
@@ -200,7 +200,7 @@ async function drawPlot() {
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
       margin: { l: 56, r: 8, t: 8, b: 48 },
-      font: { family: "IBM Plex Sans", size: 12, color: fg },
+      font: { family: "Inter", size: 12, color: fg },
       hovermode: "closest",
       transition: { duration: 500, easing: "cubic-in-out" },
       showlegend: traces.length > 0,

@@ -51,10 +51,10 @@ export function shell(page, title) {
         `<a class="nav${h === page ? " on" : ""}" href="${ROOT}${h}">` + `${i}&nbsp; ${t}</a>`
     ).join("") +
     `<a class="nav add${page === "add.html" ? " on" : ""}" href="${ROOT}add.html">＋&nbsp; Добавить эксперимент</a>` +
-    `<div class="themerow"><span>Тема</span><span class="tg-ico">☀</span>` +
+    `<button class="nav" data-nav title="Скрыть боковую панель">‹&nbsp; Скрыть панель</button>` +
+    `<div class="themerow"><span class="tg-ico">☀</span>` +
     `<button class="tgl" role="switch" data-theme-btn aria-label="Тёмная тема" title="Переключить тему">` +
     `<i></i></button><span class="tg-ico">☾</span></div>` +
-    `<button class="nav" data-nav title="Скрыть боковую панель">‹&nbsp; Скрыть панель</button>` +
     `</div>`;
   initNav();
   footer();
