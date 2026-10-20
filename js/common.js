@@ -29,9 +29,11 @@ function applyTheme(t, save) {
 }
 applyTheme(getTheme());
 const ROOT = new URL("../", import.meta.url).href; // работает и из /admin/, и из подпапки хостинга
+// три раздела, как на сайте-образце: обзор, каталог, о проекте
 const NAV = [
-  ["index.html", "Каталог экспериментов", "⛏"],
-  ["add.html", "Добавить эксперимент", "＋"],
+  ["overview.html", "Обзор базы", "▦"],
+  ["index.html", "Каталог", "⛏"],
+  ["about.html", "О проекте", "ⓘ"],
 ];
 export function shell(page, title) {
   document.title = title + " — База каменных кладок";
@@ -48,6 +50,7 @@ export function shell(page, title) {
       ([h, t, i]) =>
         `<a class="nav${h === page ? " on" : ""}" href="${ROOT}${h}">` + `${i}&nbsp; ${t}</a>`
     ).join("") +
+    `<a class="nav add${page === "add.html" ? " on" : ""}" href="${ROOT}add.html">＋&nbsp; Добавить эксперимент</a>` +
     `<button class="nav" data-theme-btn title="Переключить тему"></button>` +
     `<button class="nav" data-nav title="Скрыть боковую панель">‹&nbsp; Скрыть панель</button>` +
     `</div>`;
