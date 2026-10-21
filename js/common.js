@@ -155,3 +155,15 @@ export const plotHeight = (normal) =>
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") document.querySelector(".fsbox.fs")?.fsSet(false);
 });
+
+// просмотр картинки крупно поверх страницы (data-URL нельзя открывать ссылкой: браузеры это блокируют)
+export function openLightbox(src, caption) {
+  const box = Object.assign(document.createElement("div"), { className: "lightbox" });
+  box.innerHTML = `<img src="${src}" alt=""><span>${esc(caption, "")}</span>`;
+  box.onclick = () => box.remove();
+  const onKey = (e) => {
+    if (e.key === "Escape") box.remove();
+  };
+  document.addEventListener("keydown", onKey, { once: true });
+  document.body.append(box);
+}

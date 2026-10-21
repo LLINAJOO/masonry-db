@@ -9,6 +9,7 @@ import {
   addFullscreen,
   plotHeight,
   watchResize,
+  openLightbox,
 } from "./common.js";
 import { COLS, load } from "./data.js";
 shell("index.html", "Каталог экспериментов");
@@ -293,10 +294,7 @@ async function drawGallery(kind, text) {
     const b = e.target.closest("[data-img]");
     if (!b) return;
     const im = list.find((x) => x.id === +b.dataset.img);
-    const box = Object.assign(document.createElement("div"), { className: "lightbox" });
-    box.innerHTML = `<img src="${im.data}" alt=""><span>${esc(im.filename, "")}</span>`;
-    box.onclick = () => box.remove();
-    document.body.append(box);
+    openLightbox(im.data, im.filename);
   };
 }
 
