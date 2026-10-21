@@ -1,4 +1,14 @@
-import { sb, $, esc, shell, toast, parseCurve, isDark } from "./common.js";
+import {
+  sb,
+  $,
+  esc,
+  shell,
+  toast,
+  parseCurve,
+  isDark,
+  addFullscreen,
+  plotHeight,
+} from "./common.js";
 import { COLS, load } from "./data.js";
 shell("index.html", "Каталог экспериментов");
 
@@ -195,7 +205,7 @@ async function drawPlot() {
     el,
     traces,
     {
-      height: 460,
+      height: plotHeight(460),
       colorway: colors,
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
@@ -371,7 +381,12 @@ function renderTab() {
       ["mortar", "Раствор"],
     ]
       .map(([k, n]) => `<button data-s="${k}" class="${k === state.sub ? "on" : ""}">${n}</button>`)
-      .join("")}</div><div id="plot"></div>`;
+      .join("")}</div><div id="plotbox"><div id="plot"></div></div>`;
+    addFullscreen($("#plotbox"), () => {
+      try {
+        Plotly.relayout($("#plot"), { height: plotHeight(460) });
+      } catch {}
+    });
     $("#sub").onclick = (e) => {
       const b = e.target.closest("[data-s]");
       if (!b) return;

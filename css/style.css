@@ -90,7 +90,7 @@ main {
   margin-inline: auto;
 }
 main > * {
-  animation: rise 0.55s var(--ease) both;
+  animation: rise 0.55s var(--ease) backwards;
 }
 @keyframes rise {
   from {
@@ -515,7 +515,7 @@ summary {
   color: #fff;
 }
 #pane > * {
-  animation: rise 0.4s var(--ease) both;
+  animation: rise 0.4s var(--ease) backwards;
 }
 #rec {
   display: grid;
@@ -779,51 +779,6 @@ body.nav-off main {
   body.nav-off aside {
     padding-inline: 0;
     border-width: 0;
-  }
-}
-@media (max-width: 900px) {
-  .aside-in {
-    width: auto;
-    min-height: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-  }
-  button.nav {
-    width: auto;
-    margin: 0;
-  }
-  .themerow {
-    margin-top: 0;
-    border-top: 0;
-    padding: 0.2rem 0.5rem;
-  }
-  body.nav-off aside {
-    display: none;
-  }
-  .app {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  aside {
-    position: static;
-    height: auto;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-  }
-  .brand {
-    border: 0;
-    margin: 0;
-    padding: 0 8px 0 0;
-  }
-  main {
-    padding: 1.2rem;
-  }
-  .hero,
-  .grid {
-    grid-template-columns: 1fr;
   }
 }
 /* ===== Для тех, кто отключил анимации в системе ===== */
@@ -1362,11 +1317,6 @@ a.nav.add {
   margin-top: 10px;
   border: 1px dashed var(--line);
 }
-@media (max-width: 900px) {
-  .ovw {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
 .filters a.btn {
   color: var(--fg);
   display: inline-block;
@@ -1453,8 +1403,245 @@ a.nav.add {
 .foot nav a:hover {
   color: var(--brick);
 }
+
+/* ===== График «Обзор базы» (параллельные оси) ===== */
+.ovmain {
+  position: relative;
+}
+#ovplot {
+  overflow-x: auto;
+  position: relative;
+}
+.pc {
+  display: block;
+  touch-action: pan-x pan-y;
+  user-select: none;
+}
+.pc-axis {
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+.pc-label {
+  fill: var(--fg);
+  font:
+    600 12.5px Inter,
+    system-ui,
+    sans-serif;
+}
+.pc-tick {
+  fill: var(--muted);
+  font:
+    500 11px Inter,
+    system-ui,
+    sans-serif;
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.pc-line {
+  fill: none;
+  stroke-width: 2.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  opacity: 0.82;
+  transition:
+    opacity 0.2s,
+    stroke-width 0.15s;
+}
+.pc-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 12;
+  pointer-events: stroke;
+}
+.pc-row.dim .pc-line {
+  opacity: 0.08;
+}
+.pc-row.dim .pc-hit {
+  pointer-events: none;
+}
+.pc-row.hot .pc-line {
+  stroke-width: 5;
+  opacity: 1;
+}
+.pc-zone {
+  fill: transparent;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.pc-brush {
+  fill: color-mix(in srgb, var(--brick) 30%, transparent);
+  stroke: var(--brick);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.tip {
+  position: absolute;
+  z-index: 5;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  font-size: 0.85rem;
+  pointer-events: none;
+}
+.legend {
+  margin-top: 6px;
+}
+.legend i {
+  height: 5px;
+}
+
+/* ===== Графики на весь экран ===== */
+.fsbox {
+  position: relative;
+}
+.fsbtn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 6;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--fg);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.fsbtn:hover {
+  border-color: var(--brick);
+  color: var(--brick);
+}
+.fsbox.fs {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--bg);
+  padding: 56px 14px 14px;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+}
+.fsbox.fs .fsbtn {
+  top: 10px;
+  right: 10px;
+}
+body.fs-lock {
+  overflow: hidden;
+}
+.cvbox {
+  position: relative;
+}
+
+/* ===== Телефоны и планшеты (в конце файла, чтобы перекрывать остальное) ===== */
 @media (max-width: 900px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  aside,
+  body.nav-off aside {
+    position: static;
+    display: block;
+    height: auto;
+    padding: 10px 14px 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .aside-in {
+    width: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+  }
+  .brand {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+  .brand__sub,
+  [data-nav],
+  .navbtn,
+  body.nav-off .navbtn {
+    display: none;
+  }
+  .themerow {
+    order: 2;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .links {
+    order: 3;
+    flex: none;
+    width: 100%;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .links::-webkit-scrollbar {
+    display: none;
+  }
+  aside a.nav,
+  a.nav.add {
+    flex: none;
+    white-space: nowrap;
+    margin: 0;
+    padding: 0.4rem 0.8rem;
+  }
+  body.nav-off main {
+    padding-top: 1.2rem;
+  }
+  main {
+    padding: 1rem 14px 2.4rem;
+  }
+  h1 {
+    font-size: 1.55rem;
+  }
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+  .viewer {
+    padding: 14px;
+    margin-top: 18px;
+  }
+  .viewer .tabs {
+    gap: 14px;
+  }
+  #rec {
+    grid-template-columns: 1fr;
+  }
+  .ovw {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ovmain {
+    order: -1;
+    padding: 8px;
+  }
+  .bar {
+    flex-wrap: wrap;
+  }
+  .bar input {
+    flex: 1 1 100%;
+  }
+  .gallery {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
   .foot {
-    padding: 18px 1rem;
+    padding: 16px 14px;
   }
 }
