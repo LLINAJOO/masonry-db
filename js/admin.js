@@ -9,6 +9,7 @@ import {
   addFullscreen,
   plotHeight,
   watchResize,
+  openLightbox,
 } from "./common.js";
 
 shell("", "Панель администратора");
@@ -397,8 +398,8 @@ async function loadRequest(details) {
       ? `<div class="tt">${title}</div><div class="gallery">${list
           .map(
             (i) =>
-              `<figure><a href="${i.data}" target="_blank" rel="noopener"><img src="${i.data}" alt="">` +
-              `</a><figcaption>${esc(i.filename)}</figcaption></figure>`
+              `<figure><button type="button" class="thumb" data-img="${i.id}" title="Открыть крупно">` +
+              `<img src="${i.data}" alt=""></button><figcaption>${esc(i.filename)}</figcaption></figure>`
           )
           .join("")}</div>`
       : "";
@@ -406,6 +407,13 @@ async function loadRequest(details) {
   body.insertAdjacentHTML(
     "beforeend",
     group("masonry", "Фото кладки") + group("scheme", "Схемы испытания")
+  );
+  body.querySelectorAll("[data-img]").forEach(
+    (b) =>
+      (b.onclick = () => {
+        const im = imgs.data.find((x) => x.id === +b.dataset.img);
+        openLightbox(im.data, im.filename);
+      })
   );
 }
 
