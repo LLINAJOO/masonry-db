@@ -12,7 +12,11 @@ create index if not exists masonry_image_masonry_idx on public.masonry_image(mas
 
 alter table public.masonry_image enable row level security;
 drop policy if exists read_approved on public.masonry_image;
-create policy read_approved on public.masonry_image for select to anon, authenticated
+drop policy if exists read_approved_or_admin on public.masonry_image;
+-- гости видят картинки только одобренных кладок (is_admin() для anon недоступна, поэтому отдельная политика)
+create policy read_approved on public.masonry_image for select to anon
+  using (exists (select 1 from public.masonry m where m.id = masonry_id and m.status = 'approved'));
+create policy read_approved_or_admin on public.masonry_image for select to authenticated
   using (public.is_admin() or exists (
     select 1 from public.masonry m where m.id = masonry_id and m.status = 'approved'));
 revoke insert, update, delete on public.masonry_image from anon, authenticated;
