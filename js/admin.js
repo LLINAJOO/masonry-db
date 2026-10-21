@@ -1,4 +1,14 @@
-import { sb, $, esc, shell, toast, parseCurve, isDark } from "./common.js";
+import {
+  sb,
+  $,
+  esc,
+  shell,
+  toast,
+  parseCurve,
+  isDark,
+  addFullscreen,
+  plotHeight,
+} from "./common.js";
 
 shell("", "Панель администратора");
 
@@ -154,7 +164,7 @@ function testsTable(title, list, kind) {
         curveButtons += `
           <details class="d" data-cv="${id}">
             <summary class="btn">Кривая ${esc(res.curve_filename)}</summary>
-            <div class="cvplot"></div>
+            <div class="cvbox"><div class="cvplot"></div></div>
             <button class="btn" data-dl="${id}">Скачать ${esc(res.curve_filename)}</button>
           </details>`;
       }
@@ -413,6 +423,13 @@ function drawCurve(details) {
 
   const dark = isDark();
   const grid = "rgba(128,128,128,.18)";
+  const box = target.parentElement;
+  if (!box.querySelector(".fsbtn"))
+    addFullscreen(box, () => {
+      try {
+        Plotly.relayout(target, { height: plotHeight(280) });
+      } catch {}
+    });
   Plotly.newPlot(
     target,
     [
@@ -425,7 +442,7 @@ function drawCurve(details) {
       },
     ],
     {
-      height: 280,
+      height: plotHeight(280),
       paper_bgcolor: "rgba(0,0,0,0)",
       plot_bgcolor: "rgba(0,0,0,0)",
       margin: { l: 56, r: 8, t: 8, b: 44 },

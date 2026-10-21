@@ -46,11 +46,13 @@ export function shell(page, title) {
     ` fill="#a63d27"/></svg><div><span class="brand__name">Каменная кладка</span>` +
     `<span class="brand__sub">экспериментальная база данных</span>` +
     `</div></div>` +
+    `<nav class="links">` +
     NAV.map(
       ([h, t, i]) =>
         `<a class="nav${h === page ? " on" : ""}" href="${ROOT}${h}">` + `${i}&nbsp; ${t}</a>`
     ).join("") +
     `<a class="nav add${page === "add.html" ? " on" : ""}" href="${ROOT}add.html">＋&nbsp; Добавить эксперимент</a>` +
+    `</nav>` +
     `<button class="nav" data-nav title="Скрыть боковую панель">‹&nbsp; Скрыть панель</button>` +
     `<div class="themerow"><span class="tg-ico">☀</span>` +
     `<button class="tgl" role="switch" data-theme-btn aria-label="Тёмная тема" title="Переключить тему">` +
@@ -112,3 +114,34 @@ export function parseCurve(csv) {
     .filter((p) => p.length === 2 && p.every(Number.isFinite));
   return pts.length ? { x: pts.map((p) => p[0]), y: pts.map((p) => p[1]) } : null;
 }
+
+// ---------- «на весь экран» для графиков ----------
+// Работает и на телефонах (где настоящий fullscreen для блоков недоступен): блок закрепляется
+// поверх страницы. Закрыть — крестиком или клавишей Esc.
+export function addFullscreen(wrap, onChange) {
+  wrap.classList.add("fsbox");
+  const b = Object.assign(document.createElement("button"), {
+    type: "button",
+    className: "fsbtn",
+    textContent: "⛶",
+    title: "На весь экран",
+  });
+  b.setAttribute("aria-label", "На весь экран");
+  wrap.append(b);
+  wrap.fsSet = (on) => {
+    wrap.classList.toggle("fs", on);
+    document.body.classList.toggle("fs-lock", on);
+    b.textContent = on ? "✕" : "⛶";
+    b.title = on ? "Закрыть" : "На весь экран";
+    b.setAttribute("aria-label", b.title);
+    onChange?.(on);
+    dispatchEvent(new Event("resize"));
+  };
+  b.onclick = () => wrap.fsSet(!wrap.classList.contains("fs"));
+}
+// высота графика: обычная или на весь экран
+export const plotHeight = (normal) =>
+  document.querySelector(".fsbox.fs") ? innerHeight - 70 : normal;
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") document.querySelector(".fsbox.fs")?.fsSet(false);
+});
