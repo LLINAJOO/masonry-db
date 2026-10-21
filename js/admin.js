@@ -8,6 +8,7 @@ import {
   isDark,
   addFullscreen,
   plotHeight,
+  watchResize,
 } from "./common.js";
 
 shell("", "Панель администратора");
@@ -424,12 +425,14 @@ function drawCurve(details) {
   const dark = isDark();
   const grid = "rgba(128,128,128,.18)";
   const box = target.parentElement;
-  if (!box.querySelector(".fsbtn"))
+  if (!box.querySelector(".fsbtn")) {
+    watchResize(box, target);
     addFullscreen(box, () => {
       try {
         Plotly.relayout(target, { height: plotHeight(280) });
       } catch {}
     });
+  }
   Plotly.newPlot(
     target,
     [

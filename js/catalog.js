@@ -8,6 +8,7 @@ import {
   isDark,
   addFullscreen,
   plotHeight,
+  watchResize,
 } from "./common.js";
 import { COLS, load } from "./data.js";
 shell("index.html", "Каталог экспериментов");
@@ -382,6 +383,7 @@ function renderTab() {
     ]
       .map(([k, n]) => `<button data-s="${k}" class="${k === state.sub ? "on" : ""}">${n}</button>`)
       .join("")}</div><div id="plotbox"><div id="plot"></div></div>`;
+    watchResize($("#plotbox"), $("#plot"));
     addFullscreen($("#plotbox"), () => {
       try {
         Plotly.relayout($("#plot"), { height: plotHeight(460) });
