@@ -1289,30 +1289,6 @@ details.req[open] > summary.rsum {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
 }
-.stats2 {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin: 18px 0;
-}
-.stats2 div {
-  flex: 1 1 140px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 12px 16px;
-  background: var(--soft);
-}
-.stats2 b {
-  display: block;
-  font:
-    600 1.9rem Inter,
-    system-ui,
-    sans-serif;
-  color: var(--brick);
-}
-.stats2 small {
-  color: var(--muted);
-}
 a.nav.add {
   margin-top: 10px;
   border: 1px dashed var(--line);
