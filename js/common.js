@@ -85,6 +85,8 @@ function initNav() {
     try {
       localStorage.setItem("nav", v ? "off" : "on");
     } catch {}
+    // ширина области меняется плавно (0.4 с): после этого графики должны подстроиться
+    setTimeout(() => dispatchEvent(new Event("resize")), 450);
   };
   document.body.classList.toggle("nav-off", off);
   const b = Object.assign(document.createElement("button"), {
@@ -138,6 +140,14 @@ export function addFullscreen(wrap, onChange) {
     dispatchEvent(new Event("resize"));
   };
   b.onclick = () => wrap.fsSet(!wrap.classList.contains("fs"));
+}
+// график Plotly сам следит только за окном; а ширина блока меняется ещё и при скрытии панели
+export function watchResize(box, plotEl) {
+  new ResizeObserver(() => {
+    // ширину задаём явно: после смены высоты (полный экран) Plotly перестаёт сам подстраиваться
+    if (plotEl.data && plotEl.offsetParent && plotEl.clientWidth)
+      Promise.resolve(Plotly.relayout(plotEl, { width: plotEl.clientWidth })).catch(() => {});
+  }).observe(box);
 }
 // высота графика: обычная или на весь экран
 export const plotHeight = (normal) =>
