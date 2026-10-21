@@ -6,7 +6,6 @@ const main = $("#main");
 main.innerHTML =
   `<h1>О проекте</h1><div class="about">` +
   `<p class="lead">Открытая база экспериментов по каменной кладке: результаты испытаний кирпича, раствора и кладки из научных статей — в одном месте и в единой форме.</p>` +
-  `<div class="stats2" id="stats"></div>` +
   `<h3>Как устроена база</h3><div class="three">` +
   `<div class="kv" style="--c:var(--blue)"><h4>Кладка</h4><p>Тип кладки, толщина шва, фото образца, схема испытания и кривая «сила — перемещение».</p></div>` +
   `<div class="kv" style="--c:#c4573a"><h4>Кирпич</h4><p>Тип, плотность, пустотность, удельный периметр и собственные испытания.</p></div>` +
@@ -20,15 +19,6 @@ main.innerHTML =
 load()
   .then((rows) => {
     const src = [...new Set(rows.map((r) => r.src).filter((s) => s && s !== "—"))].sort();
-    const n = (k) => new Set(rows.map((r) => r[k]).filter(Boolean)).size;
-    $("#stats").innerHTML = [
-      [rows.length, "записей"],
-      [src.length, "источников"],
-      [n("mtype"), "типов кладки"],
-      [n("btype"), "типов кирпича"],
-    ]
-      .map(([v, l]) => `<div><b>${v}</b><small>${l}</small></div>`)
-      .join("");
     $("#src").innerHTML = src.length
       ? `<ul>${src.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`
       : `<p class="hint">Пока нет одобренных записей.</p>`;
