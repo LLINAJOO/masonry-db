@@ -156,176 +156,6 @@ aside a.nav.on {
   box-shadow: inset 3px 0 0 var(--brick);
   font-weight: 600;
 }
-/* ===== Каталог: шапка с анимацией кладки ===== */
-.hero {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 30px;
-  align-items: center;
-  padding: 28px 30px;
-  border-radius: 22px;
-  background: var(--soft);
-  border: 1px solid var(--line);
-  margin-bottom: 24px;
-}
-.hero h1 {
-  font-size: clamp(1.55rem, 0.55rem + 1.55vw, 2.4rem);
-  line-height: 1.08;
-  margin: 0;
-}
-.hero p {
-  margin: 14px 0 0;
-  color: var(--muted);
-  max-width: 52ch;
-}
-.stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 22px;
-}
-.stat {
-  display: flex;
-  flex-direction: column;
-  padding: 9px 14px 10px;
-  border-radius: 12px;
-  background: var(--soft2);
-  min-width: 98px;
-}
-.stat .count {
-  font:
-    700 1.85rem/1.1 Inter,
-    system-ui,
-    sans-serif;
-  color: var(--brick);
-}
-.stat small {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-.hero__art {
-  border-radius: 14px;
-  overflow: hidden;
-}
-.wall {
-  width: 100%;
-  display: block;
-}
-.w-shade {
-  fill: rgba(0, 0, 0, 0.08);
-}
-.w-axis {
-  fill: none;
-  stroke: rgba(255, 255, 255, 0.75);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 5;
-}
-.w-halo {
-  fill: none;
-  stroke: rgba(20, 14, 10, 0.35);
-  stroke-width: 9;
-  stroke-linecap: round;
-}
-.w-curve {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 3.5;
-  stroke-linecap: round;
-}
-.w-dot {
-  fill: #fff;
-  stroke: #1c2229;
-  stroke-width: 2.5;
-  transform-box: fill-box;
-  transform-origin: center;
-  animation: pulse 2.4s ease-in-out infinite;
-}
-.w-label {
-  fill: #fff;
-  font:
-    600 13px Inter,
-    system-ui,
-    sans-serif;
-  opacity: 0.9;
-}
-.is-animated .w-brick {
-  animation: lay 0.7s var(--spring) both;
-  animation-delay: var(--d);
-  transform-box: fill-box;
-}
-@keyframes lay {
-  from {
-    opacity: 0;
-    transform: translateY(-34px) rotate(-3deg);
-  }
-  60% {
-    opacity: 1;
-  }
-}
-.is-animated .w-halo,
-.is-animated .w-curve {
-  stroke-dasharray: 1;
-  stroke-dashoffset: 1;
-  animation: draw 1.6s 1.55s var(--ease) forwards;
-}
-@keyframes draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-.is-animated .w-axis,
-.is-animated .w-label {
-  animation: fade 0.5s 1.35s both;
-}
-.is-animated .w-dot {
-  animation:
-    pop 0.5s 3.05s var(--spring) both,
-    pulse 2.4s 3.6s ease-in-out infinite;
-}
-@keyframes pop {
-  from {
-    opacity: 0;
-    transform: scale(0);
-  }
-}
-@keyframes pulse {
-  50% {
-    transform: scale(1.3);
-  }
-}
-@keyframes fade {
-  from {
-    opacity: 0;
-  }
-}
-.is-animated .stat {
-  animation: rise 0.6s var(--ease) both;
-  animation-delay: calc(0.45s + var(--i) * 0.08s);
-}
-@property --n {
-  syntax: "<integer>";
-  inherits: false;
-  initial-value: 0;
-}
-.count {
-  --n: var(--target);
-  counter-reset: n var(--n);
-  font-variant-numeric: tabular-nums;
-}
-.count::after {
-  content: counter(n);
-}
-.is-animated .count {
-  animation: count 1.5s 0.5s var(--ease) both;
-}
-@keyframes count {
-  from {
-    --n: 0;
-  }
-  to {
-    --n: var(--target);
-  }
-}
 /* ===== Каталог: выбор записи, карточки и графики ===== */
 .grid {
   display: grid;
@@ -513,9 +343,6 @@ summary {
   background: var(--brick);
   border-color: var(--brick);
   color: #fff;
-}
-#pane > * {
-  animation: rise 0.4s var(--ease) backwards;
 }
 #rec {
   display: grid;
@@ -1619,5 +1446,235 @@ body.fs-lock {
   }
   .foot {
     padding: 16px 14px;
+  }
+}
+
+/* ===== Страница «База данных» ===== */
+.ptabs {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--soft);
+  margin-bottom: 16px;
+}
+.ptabs button {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font:
+    600 0.95rem Inter,
+    system-ui,
+    sans-serif;
+  padding: 0.45rem 1.3rem;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.ptabs button.on {
+  background: var(--brick);
+  color: #fff;
+}
+.viewer {
+  margin-top: 0;
+}
+.vhead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.vtitle b {
+  font-size: 1.5rem;
+}
+.vtitle span {
+  color: var(--muted);
+  margin-left: 8px;
+}
+.vtitle small {
+  display: block;
+  color: var(--muted);
+}
+.rgrid {
+  display: grid;
+  grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.rleft {
+  display: grid;
+  gap: 14px;
+}
+.rright {
+  min-width: 0;
+}
+.rright .tabs {
+  margin-top: 0;
+}
+.dlrow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+.source {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+.source h4 {
+  margin: 0 0 8px;
+}
+.source p {
+  margin: 0 auto;
+  max-width: 980px;
+  text-align: justify;
+  font-size: 0.92rem;
+}
+#tests {
+  margin-top: 14px;
+}
+table.mini th,
+table.mini td {
+  padding: 6px 10px;
+  white-space: normal;
+}
+/* таблица «Все записи»: перенос длинных заголовков, сортировка, фильтры-кнопки */
+#tbl th {
+  white-space: normal;
+  min-width: 112px;
+  max-width: 170px;
+  vertical-align: bottom;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  z-index: 2;
+}
+#tbl th i {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-left: 4px;
+  opacity: 0.55;
+}
+#tbl th.sorted i {
+  color: var(--brick);
+  opacity: 1;
+}
+#tbl .frow td {
+  background: var(--panel);
+  padding: 6px 8px;
+  vertical-align: top;
+  position: sticky;
+  top: 44px;
+  z-index: 1;
+  border-bottom: 1px solid var(--line);
+  cursor: default;
+}
+.fchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.fchip {
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 1px 8px;
+  font:
+    500 0.8rem Inter,
+    system-ui,
+    sans-serif;
+  cursor: pointer;
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+.fchip.on {
+  background: color-mix(in srgb, var(--brick) 16%, transparent);
+  border-color: var(--brick);
+  color: var(--fg);
+  text-decoration: none;
+  opacity: 1;
+}
+.frange {
+  display: flex;
+  gap: 4px;
+}
+.frange input,
+.ftext {
+  width: 100%;
+  min-width: 0;
+  padding: 3px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    0.8rem Inter,
+    system-ui,
+    sans-serif;
+}
+#ftoggle.on {
+  border-color: var(--brick);
+  color: var(--brick);
+}
+#tblbox .bar {
+  padding-right: 46px;
+}
+#tblbox .tw {
+  max-height: 72vh;
+  overflow: auto;
+}
+#tblbox.fs .tw {
+  max-height: calc(100vh - 150px);
+}
+#tblbox.fs {
+  overflow: hidden;
+}
+.pc-chk rect {
+  fill: transparent;
+  stroke: var(--muted);
+  stroke-width: 1.6;
+  cursor: pointer;
+}
+.pc-chk path {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.pc-chk.on rect {
+  fill: var(--brick);
+  stroke: var(--brick);
+}
+.pc-chk.on path {
+  stroke: #fff;
+}
+.pc-unit {
+  fill: var(--muted);
+  font:
+    500 11px Inter,
+    system-ui,
+    sans-serif;
+}
+.legend b {
+  margin-right: 4px;
+}
+@media (max-width: 900px) {
+  .rgrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vhead {
+    flex-wrap: wrap;
+  }
+  #tblbox .bar {
+    padding-right: 0;
+    padding-top: 40px;
   }
 }
