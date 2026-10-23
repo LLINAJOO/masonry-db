@@ -50,7 +50,7 @@ const clip = (t, max) => {
 export function mountParcoords(root, { all, visible, columns, selected }) {
   root.innerHTML =
     `<p class="hint">Каждая линия — одна запись. Проведите вдоль оси, чтобы выделить диапазон значений ` +
-    `(клик по оси снимает выделение). Показываются записи, прошедшие поиск и фильтры в таблице «Все записи» ниже; ` +
+    `(клик по оси снимает выделение). Показываются записи, прошедшие поиск в таблице «Все записи» ниже; ` +
     `терракотовым цветом выделена запись, выбранная в таблице.</p>` +
     `<div class="ovmain"><div id="ovplot"></div><div id="tip" class="tip" hidden></div></div>`;
   const wrapEl = $(".ovmain", root),
@@ -107,7 +107,7 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
       ax = defs(),
       fs = !!document.querySelector(".fsbox.fs");
     if (!rows.length) {
-      el.innerHTML = `<div class="empty"><h3>Ничего не выбрано</h3>Под поиск и фильтры таблицы не подходит ни одна запись.</div>`;
+      el.innerHTML = `<div class="empty"><h3>Ничего не выбрано</h3>Под поиск в таблице не подходит ни одна запись.</div>`;
       return;
     }
     const gap = 112,

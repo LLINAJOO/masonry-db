@@ -1550,8 +1550,12 @@ table.mini td {
 /* таблица «Все записи»: перенос длинных заголовков, сортировка, фильтры-кнопки */
 #tbl th {
   white-space: normal;
-  min-width: 112px;
-  max-width: 170px;
+  width: 148px;
+  min-width: 148px;
+  max-width: 148px;
+  padding: 10px 24px 10px 12px;
+  line-height: 1.25;
+  text-align: left;
   vertical-align: bottom;
   cursor: pointer;
   user-select: none;
@@ -1560,74 +1564,31 @@ table.mini td {
   background: var(--panel);
   z-index: 2;
 }
+#tbl th:first-child {
+  width: 56px;
+  min-width: 56px;
+  max-width: 56px;
+}
+#tbl th span {
+  display: block;
+  overflow-wrap: break-word;
+  hyphens: manual;
+}
 #tbl th i {
+  position: absolute;
+  right: 8px;
+  bottom: 11px;
   font-style: normal;
   font-size: 0.7rem;
   color: var(--muted);
-  margin-left: 4px;
   opacity: 0.55;
+}
+#tbl td {
+  vertical-align: top;
 }
 #tbl th.sorted i {
   color: var(--brick);
   opacity: 1;
-}
-#tbl .frow td {
-  background: var(--panel);
-  padding: 6px 8px;
-  vertical-align: top;
-  position: sticky;
-  top: 44px;
-  z-index: 1;
-  border-bottom: 1px solid var(--line);
-  cursor: default;
-}
-.fchips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-.fchip {
-  border: 1px solid var(--line);
-  background: none;
-  color: var(--muted);
-  border-radius: 6px;
-  padding: 1px 8px;
-  font:
-    500 0.8rem Inter,
-    system-ui,
-    sans-serif;
-  cursor: pointer;
-  text-decoration: line-through;
-  opacity: 0.7;
-}
-.fchip.on {
-  background: color-mix(in srgb, var(--brick) 16%, transparent);
-  border-color: var(--brick);
-  color: var(--fg);
-  text-decoration: none;
-  opacity: 1;
-}
-.frange {
-  display: flex;
-  gap: 4px;
-}
-.frange input,
-.ftext {
-  width: 100%;
-  min-width: 0;
-  padding: 3px 6px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--bg);
-  color: var(--fg);
-  font:
-    0.8rem Inter,
-    system-ui,
-    sans-serif;
-}
-#ftoggle.on {
-  border-color: var(--brick);
-  color: var(--brick);
 }
 #tblbox .bar {
   padding-right: 46px;
