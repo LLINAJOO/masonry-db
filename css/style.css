@@ -1214,6 +1214,7 @@ a.nav.add {
 #ovplot {
   overflow-x: auto;
   position: relative;
+  margin-top: 34px; /* место под кнопку «на весь экран», чтобы она не закрывала названия */
 }
 .pc {
   display: block;
@@ -1238,8 +1239,8 @@ a.nav.add {
     system-ui,
     sans-serif;
   paint-order: stroke;
-  stroke: var(--bg);
-  stroke-width: 3px;
+  stroke: color-mix(in srgb, var(--fg) 5%, var(--bg));
+  stroke-width: 4px;
   stroke-linejoin: round;
 }
 .pc-line {
