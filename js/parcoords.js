@@ -7,7 +7,6 @@ const SVGNS = "http://www.w3.org/2000/svg";
 // оси графика, слева направо (ключи столбцов из data.js; «no» — номер записи)
 const AXES = [
   "no",
-  "src",
   "mtype",
   "btype",
   "joint",
