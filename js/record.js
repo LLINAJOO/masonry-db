@@ -14,6 +14,7 @@ import {
 } from "./common.js";
 import { COLS, show } from "./data.js";
 import { makeZip, dataUrlBytes } from "./zip.js";
+import { sourceFromPaper } from "./bib.js";
 
 const KINDS = {
   masonry: { p: "m", name: "Кладка", of: "кладки", color: "var(--blue)" },
@@ -150,14 +151,7 @@ function testsCsv() {
   return toCsv(lines);
 }
 function sourceText() {
-  const p = row.paper || {};
-  return [
-    `Название: ${p.title ?? ""}`,
-    `Авторы: ${p.authors ?? ""}`,
-    `Год: ${p.year ?? ""}`,
-    `Журнал: ${p.journal ?? ""}`,
-    `DOI: ${p.doi ?? ""}`,
-  ].join("\r\n");
+  return sourceFromPaper(row.paper);
 }
 async function downloadCurves(kind) {
   const list = (await curvesOf(kind)) || [];
@@ -253,20 +247,10 @@ function testsTable(kind) {
   );
 }
 
-// библиографическая ссылка из полей .bib: Авторы (год) Название. Журнал. doi: …
+// библиографическая ссылка по ГОСТ, собранная из текста .bib
 function sourceBlock() {
-  const p = row.paper || {},
-    doi = p.doi && /^10\./.test(p.doi) ? encodeURI(p.doi) : null;
-  const part = (t) => (t ? esc(t) : "");
-  const head = [part(p.authors), p.year ? `(${esc(p.year)})` : ""].filter(Boolean).join(" ");
-  const tail = [part(p.title), part(p.journal)].filter(Boolean).join(". ");
-  const link = doi
-    ? `doi: <a href="https://doi.org/${doi}" target="_blank" rel="noopener">${esc(p.doi)}</a>`
-    : p.doi
-      ? `doi: ${esc(p.doi)}`
-      : "";
-  const text = [head, tail ? tail + "." : "", link].filter(Boolean).join(" ");
-  return `<div class="source"><h4>Источник</h4><p>${text || "Сведения об источнике не указаны."}</p></div>`;
+  const text = sourceFromPaper(row.paper);
+  return `<div class="source"><h4>Источник</h4><p>${text ? esc(text) : "Сведения об источнике не указаны."}</p></div>`;
 }
 
 function setDownload(fn, hint, enabled = true) {

@@ -87,16 +87,21 @@ const tests = (list, kind) =>
 
 // Одобренные кладки со всеми параметрами и испытаниями (общий загрузчик страницы «База данных»)
 export async function load() {
-  const { data, error } = await sb
-    .from("masonry")
-    .select(
-      "id,mortar_thickness,brick_id,mortar_id,paper(title,authors,year,doi,journal)," +
-        `masonry_type(title,description),${T("masonry")},` +
-        `brick(id,density,voidness,specific_perimeter,brick_type(title),${T("brick")}),` +
-        `mortar(id,density,elastic_modulus,strain_ult,stress_ult,${T("mortar")})`
-    )
-    .eq("status", "approved")
-    .order("id");
+  const query = (paperCols) =>
+    sb
+      .from("masonry")
+      .select(
+        `id,mortar_thickness,brick_id,mortar_id,paper(${paperCols}),` +
+          `masonry_type(title,description),${T("masonry")},` +
+          `brick(id,density,voidness,specific_perimeter,brick_type(title),${T("brick")}),` +
+          `mortar(id,density,elastic_modulus,strain_ult,stress_ult,${T("mortar")})`
+      )
+      .eq("status", "approved")
+      .order("id");
+  const base = "title,authors,year,doi,journal";
+  // текст .bib нужен для библиографической ссылки; если читать его нельзя — работаем по полям
+  let { data, error } = await query(base + ",bib_content");
+  if (error) ({ data, error } = await query(base));
   if (error) throw error;
   // «№» — сквозной номер по порядку: в отличие от id, не имеет дыр от отклонённых и удалённых заявок
   return data.map((r, i) => {
