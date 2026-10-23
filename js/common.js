@@ -29,10 +29,9 @@ function applyTheme(t, save) {
 }
 applyTheme(getTheme());
 const ROOT = new URL("../", import.meta.url).href; // работает и из /admin/, и из подпапки хостинга
-// три раздела, как на сайте-образце: обзор, каталог, о проекте
+// разделы меню: база данных (вкладки «Обзор» и «Каталог») и о проекте
 const NAV = [
-  ["overview.html", "Обзор базы", "▦"],
-  ["index.html", "Каталог", "⛏"],
+  ["index.html", "База данных", "⛏"],
   ["about.html", "О проекте", "ⓘ"],
 ];
 export function shell(page, title) {

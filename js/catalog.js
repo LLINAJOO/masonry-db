@@ -1,476 +1,180 @@
-import {
-  sb,
-  $,
-  esc,
-  shell,
-  toast,
-  parseCurve,
-  isDark,
-  addFullscreen,
-  plotHeight,
-  watchResize,
-  openLightbox,
-} from "./common.js";
-import { COLS, load } from "./data.js";
-shell("index.html", "Каталог экспериментов");
+// Страница «База данных»: вкладки «Обзор» и «Каталог» + общая таблица «Все записи».
+// Таблица — единый источник: её поиск, сортировка и фильтры определяют и список записей,
+// и линии на графике «Обзор».
+import { $, esc, shell, toast, addFullscreen } from "./common.js";
+import { COLS, GROUPS, show, load } from "./data.js";
+import { mountRecord, showRecord } from "./record.js";
+import { mountParcoords } from "./parcoords.js";
+shell("index.html", "База данных");
 
-const CLAY = [
-  "#b8432a",
-  "#c4573a",
-  "#a63d27",
-  "#cf6a4b",
-  "#9c3b26",
-  "#bf4d33",
-  "#d27556",
-  "#ad4630",
-];
 const state = {
   rows: [],
   id: null,
-  tab: "overview",
-  sub: "masonry",
+  page: location.hash === "#overview" ? "overview" : "catalog",
   q: "",
-  type: "",
-  hidden: new Set(),
+  sort: null, // { k, dir: 1 | -1 }
+  filters: {}, // k → { ex: Set } | { min, max } | { text }
+  showFilters: false,
+  hidden: new Set(COLS.filter((c) => c.off).map((c) => c.k)),
 };
-const cache = new Map();
-
-// ---------- шапка: кирпичи укладываются в стену, рисуется кривая ----------
-function wall(rows = 7, W = 560) {
-  let s = 7;
-  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  const bw = 64,
-    bh = 26,
-    g = 6,
-    h = rows * (bh + g) - g;
-  let out = "";
-  for (let r = 0; r < rows; r++)
-    for (let c = 0, x = r % 2 ? -(bw + g) / 2 : 0; x < W; c++, x += bw + g)
-      out +=
-        `<rect class="w-brick" x="${x.toFixed(1)}" y="${(rows - 1 - r) * (bh + g)}"` +
-        ` width="${bw}" height="${bh}" rx="2.5" fill="${CLAY[Math.floor(rnd() * 8)]}"` +
-        ` style="--d:${(0.12 + r * 0.16 + c * 0.035 + rnd() * 0.05).toFixed(2)}s"/>`;
-  const d =
-    `M 18 ${h - 18} C 90 ${h - 120}, 150 ${h - 168}, 230 ${h - 178} S 360 ${h - 150}, 430 ${h - 118} S 520 ${h - 92}, ${W - 14} ${h - 86}` +
-    ``;
-  return (
-    `<svg class="wall" viewBox="0 0 ${W} ${h}"><defs><clipPath id="wc">` +
-    `<rect width="${W}" height="${h}" rx="14"/></clipPath></defs>` +
-    `<g clip-path="url(#wc)">${out}<rect class="w-shade" width="${W}"` +
-    ` height="${h}"/></g>
-  <path class="w-axis" d="M 18 10 L 18 ${h - 18} L ${W - 10} ${h - 18}"/>` +
-    `<path class="w-halo" d="${d}" pathLength="1"/><path class="w-curve"` +
-    ` d="${d}" pathLength="1"/>
-  <circle class="w-dot" r="6" cx="${W - 14}"` +
-    ` cy="${h - 86}"/><text class="w-label" x="26" y="26">F, кН</text>` +
-    `<text class="w-label" x="${W - 74}" y="${h - 26}">Δ, мм</text>` +
-    `</svg>`
-  );
-}
-function hero(rows) {
-  const first = !sessionStorage.getItem("hero");
-  sessionStorage.setItem("hero", 1);
-  const n = (k) => new Set(rows.map((r) => r[k]).filter((v) => v && v !== "—")).size;
-  const stats = [];
-  return (
-    `<section class="hero ${first ? "is-animated" : ""}"><div><h1>База экспериментов по каменной кладке</h1>
-  <p>Результаты испытаний кирпича, раствора и кладки из научных статей.</p>
-  <div class="stats">` +
-    `${stats
-      .map(
-        ([v, l], i) =>
-          `<div class="stat" style="--i:${i}"><span class="count" style="--target:${v}">` +
-          `</span><small>${l}</small></div>`
-      )
-      .join("")}` +
-    `</div></div>
-  <div class="hero__art">${wall()}</div></section>`
-  );
-}
-
-// ---------- карточки выбранной записи ----------
-const kv = (t, c, rows) =>
-  `<div class="kv" style="--c:${c}"><h4>${t}</h4><dl>${rows
-    .map(
-      ([k, v, u]) => `<dt>${k}</dt><dd>${esc(v)}${u && v != null ? `<i>${u}</i>` : ""}` + `</dd>`
-    )
-    .join("")}` + `</dl></div>`;
-function renderRecord() {
-  const r = cur();
-  $("#rec").innerHTML =
-    `<div class="rec-head"><b>Запись №${r.no}</b><span>${esc(r.src)}` +
-    `</span></div>` +
-    kv("Кладка", "var(--blue)", [
-      ["Тип", r.mdesc ? `${r.mtype} — ${r.mdesc}` : r.mtype],
-      ["Толщина шва", r.joint, "мм"],
-    ]) +
-    kv("Кирпич", "#c4573a", [
-      ["Тип", r.btype],
-      ["Плотность", r.bdens, "кг/м³"],
-      ["Пустотность", r.void, "%"],
-      ["Уд. периметр", r.perim, "1/мм"],
-    ]) +
-    kv("Раствор", "var(--wait)", [
-      ["Плотность", r.mdens, "кг/м³"],
-      ["Модуль упругости E", r.mE, "МПа"],
-      ["Пред. деформация", r.mstrain],
-      ["Пред. напряжение", r.mstress],
-    ]);
-}
-
-// ---------- кривые ----------
+const ALL = { k: "no", label: "№", type: "num", get: (r) => [r.no] };
+const colOf = (k) => (k === "no" ? ALL : COLS.find((c) => c.k === k));
 const cur = () => state.rows.find((r) => r.id === state.id);
-async function tests(kind, id) {
-  const k = kind + id;
-  if (!cache.has(k))
-    cache.set(
-      k,
-      sb
-        .from(kind + "_test")
-        .select(
-          `id,stress_state,orientation,standard(title),${kind}_test_result(curve_filename,curve_content)`
-        )
-        .eq(kind + "_id", id)
-        .then((r) => {
-          if (r.error) throw r.error;
-          return r.data || [];
-        })
-    );
-  return cache.get(k);
-}
-const KIND_NAME = { masonry: "кладки", brick: "кирпича", mortar: "раствора" };
-// все кривые выбранного объекта (кладка / кирпич / раствор) в удобном виде
-async function curvesOf(kind) {
-  const r = cur(),
-    id = kind === "masonry" ? r.id : r[kind + "_id"];
-  if (!id) return null;
-  const out = [];
-  for (const t of await tests(kind, id))
-    for (const res of t[kind + "_test_result"] || []) {
-      const c = parseCurve(res.curve_content);
-      if (!c) continue;
-      const name = res.curve_filename || `Испытание ${out.length + 1}`;
-      out.push({
-        ...c,
-        name,
-        content: res.curve_content,
-        label: `${name}, ${t.standard?.title || "—"}, σ = ${t.stress_state ?? ""}, α = ${t.orientation ?? ""}°`,
-      });
+let overview = null;
+
+// ---------- значения столбцов ----------
+const EMPTY = "—";
+const vals = (c, r) => c.get(r);
+const distinct = (c) => {
+  const set = new Set();
+  let empty = false;
+  for (const r of state.rows) {
+    const v = vals(c, r);
+    if (!v.length) empty = true;
+    v.forEach((x) => set.add(String(x)));
+  }
+  const list = [...set].sort((a, b) => a.localeCompare(b, "ru", { numeric: true }));
+  return empty ? [...list, EMPTY] : list;
+};
+// текстовые столбцы с малым числом значений фильтруются кнопками, остальные — вводом
+const chipCols = () => {
+  const m = new Map();
+  for (const c of COLS) if (c.type === "txt") m.set(c.k, distinct(c));
+  return new Map([...m].filter(([, v]) => v.length > 0 && v.length <= 8));
+};
+let CHIPS = new Map();
+
+function passes(r) {
+  const q = state.q.trim().toLowerCase();
+  if (
+    q &&
+    ![String(r.no), ...COLS.map((c) => show(c, r))].some((t) => String(t).toLowerCase().includes(q))
+  )
+    return false;
+  for (const [k, f] of Object.entries(state.filters)) {
+    const c = colOf(k),
+      v = vals(c, r);
+    if (f.ex) {
+      if (!(v.length ? v : [EMPTY]).some((x) => !f.ex.has(String(x)))) return false;
+    } else if (f.text) {
+      if (!v.some((x) => String(x).toLowerCase().includes(f.text.toLowerCase()))) return false;
+    } else if (f.min != null || f.max != null) {
+      if (!v.some((x) => (f.min == null || x >= f.min) && (f.max == null || x <= f.max)))
+        return false;
     }
-  return out;
+  }
+  return true;
 }
-let token = 0;
-async function drawPlot() {
-  const my = ++token,
-    kind = state.sub,
-    el = $("#plot");
-  if (!el) return;
-  try {
-    Plotly.purge(el);
-  } catch {} // сбрасываем прежний график, иначе повторная отрисовка в том же блоке ломается
-  el.innerHTML = `<div class="note">Загрузка кривых…</div>`;
-  let cv;
-  try {
-    cv = await curvesOf(kind);
-  } catch (e) {
-    cache.delete(kind + cur().id);
-    if (my === token)
-      el.innerHTML =
-        `<div class="note">Не удалось загрузить кривые: ${esc(e.message)}` +
-        `<br>Проверьте политики чтения таблиц *_test и *_test_result в Supabase.</div>`;
-    return;
-  }
-  if (my !== token) return;
-  if (!cv) {
-    el.innerHTML = `<div class="note">Для этой записи ${kind === "brick" ? "кирпич" : "раствор"} не указан.</div>`;
-    return;
-  }
-  if (typeof Plotly === "undefined") {
-    el.innerHTML = `<div class="note">Не загрузилась библиотека графиков Plotly. Проверьте интернет или блокировщик рекламы.</div>`;
-    return;
-  }
-  const fg = getComputedStyle(document.body).color;
-  const colors = isDark()
-    ? ["#e0806d", "#4a88d6", "#b8850c", "#a674d4", "#3aa86b"]
-    : ["#cc6c5c", "#2f6db5", "#a87700", "#8a4fb0", "#2f8a55"];
-  const traces = cv.map((c) => ({
-    x: c.x,
-    y: c.y,
-    type: "scatter",
-    mode: "lines",
-    line: { width: 2.2, shape: "spline", smoothing: 0.4 },
-    name: c.label,
-    hovertemplate: `Перемещение: %{x:.2f} мм<br>Сила: %{y:.2f} кН<extra>${esc(c.name)}</extra>`,
-  }));
-  el.innerHTML = "";
-  Plotly.newPlot(
-    el,
-    traces,
-    {
-      height: plotHeight(460),
-      colorway: colors,
-      paper_bgcolor: "rgba(0,0,0,0)",
-      plot_bgcolor: "rgba(0,0,0,0)",
-      margin: { l: 56, r: 8, t: 8, b: 48 },
-      font: { family: "Inter", size: 12, color: fg },
-      hovermode: "closest",
-      transition: { duration: 500, easing: "cubic-in-out" },
-      showlegend: traces.length > 0,
-      legend: { orientation: "h", y: -0.25, font: { size: 11 } },
-      xaxis: {
-        title: "Перемещение, мм",
-        gridcolor: "rgba(128,128,128,.18)",
-        zerolinecolor: "rgba(128,128,128,.45)",
-        visible: traces.length > 0,
-      },
-      yaxis: {
-        title: "Сила, кН",
-        gridcolor: "rgba(128,128,128,.18)",
-        zerolinecolor: "rgba(128,128,128,.45)",
-        visible: traces.length > 0,
-      },
-      annotations: traces.length
-        ? []
-        : [
-            {
-              text: "Для этой записи кривые не загружены",
-              xref: "paper",
-              yref: "paper",
-              x: 0.5,
-              y: 0.5,
-              showarrow: false,
-              font: { size: 14 },
-              opacity: 0.6,
-            },
-          ],
-    },
-    { responsive: true, displayModeBar: false }
+function compare(a, b) {
+  const { k, dir } = state.sort,
+    c = colOf(k),
+    va = vals(c, a)[0],
+    vb = vals(c, b)[0];
+  if (va == null && vb == null) return 0;
+  if (va == null) return 1; // пустые всегда внизу
+  if (vb == null) return -1;
+  return (
+    dir *
+    (c.type === "num" ? va - vb : String(va).localeCompare(String(vb), "ru", { numeric: true }))
   );
 }
-
-// ---------- фото кладки и схемы испытаний ----------
-const imgCache = new Map();
-function imagesOf(id) {
-  if (!imgCache.has(id))
-    imgCache.set(
-      id,
-      sb
-        .from("masonry_image")
-        .select("id,kind,filename,data")
-        .eq("masonry_id", id)
-        .order("id")
-        .then((r) => {
-          if (r.error) throw r.error;
-          return r.data || [];
-        })
-    );
-  return imgCache.get(id);
-}
-async function drawGallery(kind, text) {
-  const el = $("#gal"),
-    id = state.id;
-  el.innerHTML = `<div class="note">Загрузка изображений…</div>`;
-  let list;
-  try {
-    list = (await imagesOf(id)).filter((i) => i.kind === kind);
-  } catch (e) {
-    imgCache.delete(id);
-    if (id === state.id)
-      el.innerHTML = `<div class="note">Не удалось загрузить изображения: ${esc(e.message)}</div>`;
-    return;
-  }
-  if (id !== state.id) return;
-  el.innerHTML = list.length
-    ? `<div class="gallery">${list
-        .map(
-          (i) =>
-            `<figure><button class="thumb" data-img="${i.id}" title="Открыть крупно">` +
-            `<img src="${i.data}" alt="${esc(i.filename, text)}" loading="lazy"></button>` +
-            `<figcaption>${esc(i.filename)}</figcaption></figure>`
-        )
-        .join("")}</div>`
-    : `<div class="empty"><h3>Изображений нет</h3>Для этой записи ${text} не загружены.</div>`;
-  el.onclick = (e) => {
-    const b = e.target.closest("[data-img]");
-    if (!b) return;
-    const im = list.find((x) => x.id === +b.dataset.img);
-    openLightbox(im.data, im.filename);
-  };
-}
-
-// ---------- вкладка «Данные» ----------
-function saveText(name, text) {
-  const a = Object.assign(document.createElement("a"), {
-    href: URL.createObjectURL(new Blob(["\ufeff" + text], { type: "text/csv" })),
-    download: name,
-  });
-  a.click();
-  URL.revokeObjectURL(a.href);
-}
-async function drawData() {
-  const el = $("#dat"),
-    r = cur();
-  el.innerHTML = `<div class="note">Загрузка…</div>`;
-  let html = "";
-  try {
-    for (const k of ["masonry", "brick", "mortar"]) {
-      const cv = await curvesOf(k);
-      html +=
-        `<h4 class="subh">Кривые ${KIND_NAME[k]}</h4>` +
-        (cv && cv.length
-          ? cv
-              .map(
-                (c, i) =>
-                  `<div class="drow"><span>${esc(c.label)}</span>` +
-                  `<button class="btn" data-dl="${k}:${i}">Скачать CSV</button></div>`
-              )
-              .join("")
-          : `<p class="hint">Нет загруженных кривых.</p>`);
-    }
-  } catch (e) {
-    el.innerHTML = `<div class="note">Не удалось загрузить данные: ${esc(e.message)}</div>`;
-    return;
-  }
-  if (r.id !== state.id) return;
-  el.innerHTML =
-    `<div class="drow"><span><b>Параметры записи №${r.no}</b> (кладка, кирпич, раствор)</span>` +
-    `<button class="btn primary" data-dl="params">Скачать CSV</button></div>` +
-    html;
-  el.onclick = async (e) => {
-    const b = e.target.closest("[data-dl]");
-    if (!b) return;
-    if (b.dataset.dl === "params") {
-      const q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-      saveText(
-        `record_${r.no}.csv`,
-        [["Параметр", "Значение"], ...COLS.map((c) => [c[1], r[c[0]]])]
-          .map((l) => l.map(q).join(","))
-          .join("\r\n")
-      );
-    } else {
-      const [k, i] = b.dataset.dl.split(":");
-      const c = (await curvesOf(k))[+i];
-      saveText(c.name.replace(/\.csv$/i, "") + ".csv", c.content);
-    }
-  };
-}
-
-// ---------- вкладки просмотра записи ----------
-const TABS = [
-  ["overview", "Обзор"],
-  ["plot", "График F–Δ"],
-  ["photo", "Фото кладки"],
-  ["scheme", "Схема испытания"],
-  ["data", "Данные"],
-];
-function renderTab() {
-  const t = state.tab,
-    pane = $("#pane");
-  document
-    .querySelectorAll("#vtabs button")
-    .forEach((b) => b.classList.toggle("on", b.dataset.t === t));
-  token++; // отменяем незавершённую отрисовку графика
-  if (t === "overview") {
-    pane.innerHTML = `<div id="rec"></div>`;
-    renderRecord();
-  } else if (t === "plot") {
-    pane.innerHTML = `<div class="seg" id="sub">${[
-      ["masonry", "Кладка"],
-      ["brick", "Кирпич"],
-      ["mortar", "Раствор"],
-    ]
-      .map(([k, n]) => `<button data-s="${k}" class="${k === state.sub ? "on" : ""}">${n}</button>`)
-      .join("")}</div><div id="plotbox"><div id="plot"></div></div>`;
-    watchResize($("#plotbox"), $("#plot"));
-    addFullscreen($("#plotbox"), () => {
-      try {
-        Plotly.relayout($("#plot"), { height: plotHeight(460) });
-      } catch {}
-    });
-    $("#sub").onclick = (e) => {
-      const b = e.target.closest("[data-s]");
-      if (!b) return;
-      state.sub = b.dataset.s;
-      document.querySelectorAll("#sub button").forEach((x) => x.classList.toggle("on", x === b));
-      drawPlot();
-    };
-    drawPlot();
-  } else if (t === "data") {
-    pane.innerHTML = `<div id="dat"></div>`;
-    drawData();
-  } else {
-    pane.innerHTML = `<div id="gal"></div>`;
-    drawGallery(
-      t === "photo" ? "masonry" : "scheme",
-      t === "photo" ? "фото кладки" : "схемы испытания"
-    );
-  }
-}
+const view = () => {
+  const list = state.rows.filter(passes);
+  return state.sort ? list.sort(compare) : list;
+};
+const shown = () => COLS.filter((c) => !state.hidden.has(c.k));
+const activeFilters = () => Object.keys(state.filters).length + (state.q.trim() ? 1 : 0);
 
 // ---------- таблица ----------
-const view = () => {
-  const q = state.q.trim().toLowerCase();
-  return state.rows.filter(
-    (r) =>
-      (!state.type || r.mtype === state.type) &&
-      (!q ||
-        ["no", ...COLS.map((c) => c[0])].some((k) =>
-          String(r[k] ?? "")
-            .toLowerCase()
-            .includes(q)
-        ))
-  );
-};
-const shown = () => COLS.filter((c) => !state.hidden.has(c[0]));
-function renderTable() {
+function renderHead() {
+  const arrow = (k) => (state.sort?.k === k ? (state.sort.dir > 0 ? "▲" : "▼") : "↕");
+  const th = (c) =>
+    `<th data-sort="${c.k}" class="${state.sort?.k === c.k ? "sorted" : ""}" title="Сортировать">` +
+    `<span>${esc(c.label)}</span><i>${arrow(c.k)}</i></th>`;
+  let h = `<tr>${[ALL, ...shown()].map(th).join("")}</tr>`;
+  if (state.showFilters) {
+    h += `<tr class="frow"><td></td>${shown()
+      .map((c) => `<td>${filterCell(c)}</td>`)
+      .join("")}</tr>`;
+  }
+  $("#tbl thead").innerHTML = h;
+}
+function filterCell(c) {
+  const f = state.filters[c.k];
+  if (CHIPS.has(c.k))
+    return `<div class="fchips">${CHIPS.get(c.k)
+      .map(
+        (v) =>
+          `<button data-fk="${c.k}" data-v="${esc(v)}" class="fchip${f?.ex?.has(v) ? "" : " on"}">${esc(v)}</button>`
+      )
+      .join("")}</div>`;
+  if (c.type === "num")
+    return `<div class="frange"><input type="number" data-fk="${c.k}" data-b="min" placeholder="от" value="${f?.min ?? ""}"><input type="number" data-fk="${c.k}" data-b="max" placeholder="до" value="${f?.max ?? ""}"></div>`;
+  return `<input type="search" class="ftext" data-fk="${c.k}" data-b="text" placeholder="содержит…" value="${esc(f?.text, "")}">`;
+}
+function renderBody() {
   const v = view(),
     cols = shown();
   $("#cap").textContent =
     `Показано ${v.length} из ${state.rows.length}` +
-    (state.q.trim() ? ` — по запросу «${state.q.trim()}»` : "") +
-    (state.type ? ` — тип ${state.type}` : "");
-  $("#dl").disabled = !v.length;
-  $("#tbl").innerHTML = v.length
-    ? `<thead><tr><th>№</th>${cols.map((c) => `<th>${c[1]}</th>`).join("")}` +
-      `</tr></thead><tbody>${v
+    (activeFilters() ? ` — применены фильтры (${activeFilters()})` : "");
+  $("#tdl").disabled = !v.length;
+  $("#reset").hidden = !activeFilters();
+  $("#ftoggle").classList.toggle("on", state.showFilters);
+  $("#tbl tbody").innerHTML = v.length
+    ? v
         .map(
           (r) =>
-            `<tr data-id="${r.id}" class="${r.id === state.id ? "on" : ""}">` +
-            `<td>${r.no}</td>${cols.map((c) => `<td>${esc(r[c[0]])}</td>`).join("")}` +
+            `<tr data-id="${r.id}" class="${r.id === state.id ? "on" : ""}"><td>${r.no}</td>` +
+            cols.map((c) => `<td>${esc(show(c, r))}</td>`).join("") +
             `</tr>`
         )
-        .join("")}` +
-      `</tbody>`
-    : `<tbody><tr><td><div class="empty"><h3>Ничего не нашлось</h3>Попробуйте другое слово или очистите поиск.</div>` +
-      `</td></tr></tbody>`;
+        .join("")
+    : `<tr><td colspan="${cols.length + 1}"><div class="empty"><h3>Ничего не нашлось</h3>Измените поиск или сбросьте фильтры.</div></td></tr>`;
+  overview?.redraw();
+}
+function renderTable() {
+  renderHead();
+  renderBody();
 }
 function downloadCsv() {
   const cols = shown(),
     q = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = [
-    ["№", ...cols.map((c) => c[1])],
-    ...view().map((r) => [r.no, ...cols.map((c) => r[c[0]])]),
+    ["№", ...cols.map((c) => c.label)],
+    ...view().map((r) => [r.no, ...cols.map((c) => show(c, r))]),
   ]
     .map((l) => l.map(q).join(","))
     .join("\r\n");
   const a = Object.assign(document.createElement("a"), {
-    href: URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv" })),
+    href: URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" })),
     download: "masonry_database.csv",
   });
   a.click();
   URL.revokeObjectURL(a.href);
 }
 
+// ---------- выбор записи и вкладки страницы ----------
 function select(id, fromTable) {
   state.id = id;
-  $("#sel").value = id;
-  renderTab();
+  showRecord(cur());
   document.querySelectorAll("#tbl tr.on").forEach((t) => t.classList.remove("on"));
   document.querySelector(`#tbl tr[data-id="${id}"]`)?.classList.add("on");
   if (fromTable) {
-    $("#viewer").scrollIntoView({ behavior: "smooth", block: "start" });
+    document.querySelector(".fsbox.fs")?.fsSet(false);
+    if (state.page === "catalog") $("#viewer").scrollIntoView({ block: "start" });
     toast(`Открыта запись №${cur().no}`);
   }
+}
+function setPage(p) {
+  state.page = p;
+  history.replaceState(null, "", p === "overview" ? "#overview" : location.pathname);
+  document
+    .querySelectorAll("#ptabs button")
+    .forEach((b) => b.classList.toggle("on", b.dataset.p === p));
+  $("#pcat").hidden = p !== "catalog";
+  $("#pov").hidden = p !== "overview";
+  if (p === "overview") overview.redraw();
 }
 
 async function init() {
@@ -484,66 +188,55 @@ async function init() {
     return;
   }
   if (!state.rows.length) {
-    main.innerHTML =
-      `<div class="empty"><h3>Записей пока нет</h3>Здесь появятся одобренные эксперименты. <a href="add.html">Добавить эксперимент</a>` +
-      `</div>`;
+    main.innerHTML = `<div class="empty"><h3>Записей пока нет</h3>Здесь появятся одобренные эксперименты. <a href="add.html">Добавить эксперимент</a></div>`;
     return;
   }
+  CHIPS = chipCols();
   state.id = state.rows[0].id;
   main.innerHTML =
-    hero(state.rows) +
-    `<section class="viewer" id="viewer"><label class="lbl">Запись<select id="sel">` +
-    `${state.rows
-      .map(
-        (r) => `<option value="${r.id}">№${r.no} — ${esc(r.mtype)} / ${esc(r.btype)}` + `</option>`
-      )
-      .join("")}` +
-    `</select></label><div class="tabs" id="vtabs">` +
-    `${TABS.map(([k, t]) => `<button data-t="${k}">${t}</button>`).join("")}` +
-    `</div><div id="pane"></div></section>
-    <h3 class="sec">Все записи</h3>` +
-    `<p class="hint">Нажмите на строку, чтобы открыть запись. Поиск ищет по всем столбцам.</p>
-  <div class="chips" id="types">` +
-    `<button data-ty="" class="on">Все типы</button>${[...new Set(state.rows.map((r) => r.mtype))]
-      .filter(Boolean)
-      .sort()
-      .map((t) => `<button data-ty="${esc(t)}">${esc(t)}</button>`)
-      .join("")}</div>
-  <div class="bar">` +
-    `<input id="q" type="search" placeholder="Автор, год, тип кирпича или кладки…">` +
-    `<details class="pop"><summary>Столбцы</summary><div class="menu">` +
-    `${["Кладка", "Кирпич", "Раствор"]
-      .map(
-        (g) =>
-          `<b>${g}</b>` +
-          COLS.filter((c) => c[2] === g)
-            .map(
-              (c) => `<label><input type="checkbox" data-c="${c[0]}" checked> ${c[1]}` + `</label>`
-            )
-            .join("")
-      )
-      .join("")}` +
-    `</div></details><button id="dl" class="btn">Скачать CSV</button>` +
-    `</div>
-  <p id="cap" class="hint"></p><div class="tw"><table id="tbl">` +
-    `</table></div>`;
-  $("#sel").onchange = (e) => select(+e.target.value);
-  $("#vtabs").onclick = (e) => {
-    const b = e.target.closest("[data-t]");
-    if (!b) return;
-    state.tab = b.dataset.t;
-    renderTab();
+    `<div class="ptabs" id="ptabs"><button data-p="overview">Обзор</button><button data-p="catalog">Каталог</button></div>` +
+    `<div id="pcat"></div><div id="pov" hidden></div>` +
+    `<h3 class="sec">Все записи</h3>` +
+    `<p class="hint">Нажмите на строку, чтобы открыть запись. Сортировка — по заголовку столбца, фильтры — кнопка «Фильтры». Те же записи показаны на графике во вкладке «Обзор».</p>` +
+    `<div id="tblbox"><div class="bar"><input id="q" type="search" placeholder="Поиск по всем столбцам…">` +
+    `<button id="ftoggle" class="btn" title="Показать или скрыть фильтры под заголовками">Фильтры</button>` +
+    `<button id="reset" class="btn" hidden>Сбросить</button>` +
+    `<details class="pop"><summary>Столбцы</summary><div class="menu">${GROUPS.map(
+      (g) =>
+        `<b>${g}</b>` +
+        COLS.filter((c) => c.group === g)
+          .map(
+            (c) =>
+              `<label><input type="checkbox" data-c="${c.k}"${state.hidden.has(c.k) ? "" : " checked"}> ${esc(c.label)}</label>`
+          )
+          .join("")
+    ).join("")}</div></details><button id="tdl" class="btn">Скачать CSV</button></div>` +
+    `<p id="cap" class="hint"></p><div class="tw"><table id="tbl"><thead></thead><tbody></tbody></table></div></div>`;
+
+  mountRecord($("#pcat"));
+  overview = mountParcoords($("#pov"), {
+    all: () => state.rows,
+    visible: view,
+    columns: COLS,
+  });
+  addFullscreen($("#tblbox"));
+
+  $("#ptabs").onclick = (e) => {
+    const b = e.target.closest("[data-p]");
+    if (b) setPage(b.dataset.p);
   };
-  $("#types").onclick = (e) => {
-    const b = e.target.closest("[data-ty]");
-    if (!b) return;
-    state.type = b.dataset.ty;
-    document.querySelectorAll("#types button").forEach((x) => x.classList.toggle("on", x === b));
-    renderTable();
-  };
-  addEventListener("themechange", () => state.tab === "plot" && drawPlot());
   $("#q").oninput = (e) => {
     state.q = e.target.value;
+    renderBody();
+  };
+  $("#ftoggle").onclick = () => {
+    state.showFilters = !state.showFilters;
+    renderTable();
+  };
+  $("#reset").onclick = () => {
+    state.filters = {};
+    state.q = "";
+    $("#q").value = "";
     renderTable();
   };
   document.querySelectorAll("[data-c]").forEach(
@@ -553,12 +246,48 @@ async function init() {
         renderTable();
       })
   );
-  $("#tbl").onclick = (e) => {
+  // заголовок: сортировка по кругу «по возрастанию → по убыванию → без сортировки»
+  $("#tbl thead").onclick = (e) => {
+    const chip = e.target.closest(".fchip");
+    if (chip) {
+      const k = chip.dataset.fk,
+        f = (state.filters[k] ??= { ex: new Set() });
+      const v = chip.dataset.v;
+      f.ex.has(v) ? f.ex.delete(v) : f.ex.add(v);
+      chip.classList.toggle("on", !f.ex.has(v));
+      if (!f.ex.size) delete state.filters[k];
+      renderBody();
+      return;
+    }
+    const th = e.target.closest("th[data-sort]");
+    if (!th) return;
+    const k = th.dataset.sort;
+    state.sort =
+      !state.sort || state.sort.k !== k
+        ? { k, dir: 1 }
+        : state.sort.dir > 0
+          ? { k, dir: -1 }
+          : null;
+    renderTable();
+  };
+  $("#tbl thead").oninput = (e) => {
+    const i = e.target.closest("input[data-fk]");
+    if (!i) return;
+    const k = i.dataset.fk,
+      b = i.dataset.b,
+      f = (state.filters[k] ??= {});
+    f[b] = b === "text" ? i.value.trim() : i.value === "" ? null : +i.value;
+    if (b === "text" ? !f.text : f.min == null && f.max == null) delete state.filters[k];
+    renderBody();
+  };
+  $("#tbl tbody").onclick = (e) => {
     const tr = e.target.closest("tr[data-id]");
     if (tr) select(+tr.dataset.id, true);
   };
-  $("#dl").onclick = downloadCsv;
-  renderTab();
+  $("#tdl").onclick = downloadCsv;
+
+  showRecord(cur());
   renderTable();
+  setPage(state.page);
 }
 init();
