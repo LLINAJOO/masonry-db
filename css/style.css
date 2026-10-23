@@ -1247,10 +1247,16 @@ a.nav.add {
   stroke-width: 2.8;
   stroke-linejoin: round;
   stroke-linecap: round;
-  opacity: 0.82;
+  stroke: var(--blue);
+  opacity: 0.45;
   transition:
     opacity 0.2s,
     stroke-width 0.15s;
+}
+.pc-row.sel .pc-line {
+  stroke: var(--brick);
+  stroke-width: 5;
+  opacity: 1;
 }
 .pc-hit {
   fill: none;

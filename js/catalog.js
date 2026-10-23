@@ -160,6 +160,7 @@ function select(id, fromTable) {
   showRecord(cur());
   document.querySelectorAll("#tbl tr.on").forEach((t) => t.classList.remove("on"));
   document.querySelector(`#tbl tr[data-id="${id}"]`)?.classList.add("on");
+  overview?.redraw();
   if (fromTable) {
     document.querySelector(".fsbox.fs")?.fsSet(false);
     if (state.page === "catalog") $("#viewer").scrollIntoView({ block: "start" });
@@ -217,6 +218,7 @@ async function init() {
   overview = mountParcoords($("#pov"), {
     all: () => state.rows,
     visible: view,
+    selected: () => state.id,
     columns: COLS,
   });
   addFullscreen($("#tblbox"));
