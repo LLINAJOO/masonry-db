@@ -1,33 +1,9 @@
 // График «Обзор»: параллельные оси на чистом SVG.
 // Диапазоны осей считаются по всей базе и не меняются при фильтрации: фильтры лишь скрывают линии.
-import { $, esc, isDark, addFullscreen } from "./common.js";
+import { $, esc, addFullscreen } from "./common.js";
 import { show } from "./data.js";
 
 const SVGNS = "http://www.w3.org/2000/svg";
-const PALETTE_L = [
-  "#1f6feb",
-  "#e8381f",
-  "#e69500",
-  "#9333ea",
-  "#16a34a",
-  "#0891b2",
-  "#db2777",
-  "#65a30d",
-  "#7c3aed",
-  "#b45309",
-];
-const PALETTE_D = [
-  "#5aa9ff",
-  "#ff6b4a",
-  "#ffc233",
-  "#c084fc",
-  "#3ddc84",
-  "#22d3ee",
-  "#f472b6",
-  "#a3e635",
-  "#a78bfa",
-  "#fb923c",
-];
 // оси графика, слева направо (ключи столбцов из data.js; «no» — номер записи)
 const AXES = [
   "no",
@@ -61,18 +37,16 @@ const wrap = (text, n) => {
   return [...lines, cur];
 };
 
-export function mountParcoords(root, { all, visible, columns }) {
+export function mountParcoords(root, { all, visible, columns, selected }) {
   root.innerHTML =
     `<p class="hint">Каждая линия — одна запись. Проведите вдоль оси, чтобы выделить диапазон значений ` +
-    `(клик по оси снимает выделение). Галочка над названием категориального столбца раскрашивает линии ` +
-    `по его значениям. Показываются записи, прошедшие поиск и фильтры в таблице «Все записи» ниже.</p>` +
-    `<div class="ovmain"><div id="ovplot"></div><div id="tip" class="tip" hidden></div>` +
-    `<div class="legend" id="legend"></div></div>`;
+    `(клик по оси снимает выделение). Показываются записи, прошедшие поиск и фильтры в таблице «Все записи» ниже; ` +
+    `терракотовым цветом выделена запись, выбранная в таблице.</p>` +
+    `<div class="ovmain"><div id="ovplot"></div><div id="tip" class="tip" hidden></div></div>`;
   const wrapEl = $(".ovmain", root),
     el = $("#ovplot", root),
     tip = $("#tip", root);
   const brush = new Map(); // ключ оси → [от, до] в долях 0..1
-  let colorBy = "mtype";
 
   // оси строятся один раз для всей базы, поэтому не «прыгают» при фильтрации
   const defs = () => {
@@ -118,11 +92,10 @@ export function mountParcoords(root, { all, visible, columns }) {
 
   function draw() {
     if (root.hidden) return;
-    const rows = visible(),
+    const sel = selected?.(),
+      rows = visible(),
       ax = defs(),
-      pal = isDark() ? PALETTE_D : PALETTE_L,
       fs = !!document.querySelector(".fsbox.fs");
-    $("#legend", root).innerHTML = "";
     if (!rows.length) {
       el.innerHTML = `<div class="empty"><h3>Ничего не выбрано</h3>Под поиск и фильтры таблицы не подходит ни одна запись.</div>`;
       return;
@@ -137,9 +110,6 @@ export function mountParcoords(root, { all, visible, columns }) {
       H = fs ? Math.max(460, innerHeight - 170) : 560,
       X = (i) => ml + i * step,
       Y = (t) => top + (1 - t) * (H - top - bot);
-    // цвет линий: по выбранному категориальному столбцу
-    const cd = ax.find((d) => d.k === colorBy && d.cat);
-    const colorOf = (r) => (cd ? pal[cd.list.indexOf(cd.get(r)) % pal.length] : pal[0]);
     let h = "";
     ax.forEach((d, i) => {
       h += `<line class="pc-axis" x1="${X(i)}" x2="${X(i)}" y1="${top}" y2="${H - bot}"/>`;
@@ -147,10 +117,6 @@ export function mountParcoords(root, { all, visible, columns }) {
       lines.forEach((t, n) => {
         h += `<text class="pc-label" x="${X(i)}" y="${top - 18 - (lines.length - 1 - n) * 15}" text-anchor="middle">${esc(t)}</text>`;
       });
-      if (d.cat)
-        h +=
-          `<g class="pc-chk${colorBy === d.k ? " on" : ""}" data-chk="${d.k}" transform="translate(${X(i) - 8},${top - 18 - lines.length * 15 - 12})">` +
-          `<title>Раскрасить линии по этому столбцу</title><rect width="16" height="16" rx="4"/><path d="M3.5 8.5 L7 12 L12.5 4.5"/></g>`;
       if (d.unit)
         h += `<text class="pc-unit" x="${X(i)}" y="${H - bot + 22}" text-anchor="middle">${esc(d.unit)}</text>`;
       const ticks = d.cat
@@ -176,8 +142,12 @@ export function mountParcoords(root, { all, visible, columns }) {
     };
     rows.forEach((r, k) => {
       const p = path(r);
-      h += `<g class="pc-row" data-k="${k}"><path class="pc-hit" d="${p}"/><path class="pc-line" d="${p}" stroke="${colorOf(r)}"/></g>`;
+      h += `<g class="pc-row${r.id === sel ? " sel" : ""}" data-k="${k}"><path class="pc-hit" d="${p}"/><path class="pc-line" d="${p}"/></g>`;
     });
+    // выбранная запись рисуется поверх остальных
+    h =
+      h.replace(/(<g class="pc-row sel"[\s\S]*?<\/g>)/, "") +
+      (h.match(/<g class="pc-row sel"[\s\S]*?<\/g>/)?.[0] || "");
     h += `<g class="pc-brushes"></g>`;
     ax.forEach(
       (d, i) =>
@@ -214,14 +184,6 @@ export function mountParcoords(root, { all, visible, columns }) {
     };
     apply();
 
-    // легенда: значения столбца, по которому идёт раскраска
-    if (cd)
-      $("#legend", root).innerHTML =
-        `<b>${esc(cd.name)}:</b> ` +
-        cd.list
-          .map((v, i) => `<span><i style="background:${pal[i % pal.length]}"></i>${esc(v)}</span>`)
-          .join("");
-
     // подсвеченная линия и подсказка
     const hot = (g, ev) => {
       lines.forEach((x) => x.classList.remove("hot"));
@@ -243,11 +205,6 @@ export function mountParcoords(root, { all, visible, columns }) {
     });
     svg.addEventListener("pointerleave", () => hot(null));
     svg.addEventListener("click", (e) => {
-      const chk = e.target.closest(".pc-chk");
-      if (chk) {
-        colorBy = colorBy === chk.dataset.chk ? "" : chk.dataset.chk; // выбрать можно только один столбец
-        return draw();
-      }
       const g = e.target.closest(".pc-row");
       if (g && !g.classList.contains("dim")) hot(g, e);
     });
@@ -281,7 +238,6 @@ export function mountParcoords(root, { all, visible, columns }) {
   }
 
   addFullscreen(wrapEl, draw);
-  addEventListener("themechange", draw);
   let rt;
   addEventListener("resize", () => {
     clearTimeout(rt);
