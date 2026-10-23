@@ -25,16 +25,27 @@ const fmt = (v) => {
   const a = Math.abs(v);
   return String(a >= 100 || Number.isInteger(v) ? Math.round(v * 10) / 10 : +v.toPrecision(2));
 };
-const wrap = (text, n) => {
+// перенос по реальной ширине текста (в пикселях), а не по числу символов
+const ctx = document.createElement("canvas").getContext("2d");
+const textW = (t, font) => ((ctx.font = font), ctx.measureText(t).width);
+const LABEL_FONT = "600 12.5px Inter, system-ui, sans-serif";
+const TICK_FONT = "500 11px Inter, system-ui, sans-serif";
+const wrapPx = (text, max) => {
   const lines = [];
   let cur = "";
   for (const w of String(text).split(" ")) {
-    if (cur && (cur + " " + w).length > n) {
+    if (cur && textW(cur + " " + w, LABEL_FONT) > max) {
       lines.push(cur);
       cur = w;
     } else cur = cur ? cur + " " + w : w;
   }
   return [...lines, cur];
+};
+const clip = (t, max) => {
+  if (textW(t, TICK_FONT) <= max) return t;
+  let n = t.length;
+  while (n > 1 && textW(t.slice(0, n) + "…", TICK_FONT) > max) n--;
+  return t.slice(0, n) + "…";
 };
 
 export function mountParcoords(root, { all, visible, columns, selected }) {
@@ -100,22 +111,25 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
       el.innerHTML = `<div class="empty"><h3>Ничего не выбрано</h3>Под поиск и фильтры таблицы не подходит ни одна запись.</div>`;
       return;
     }
-    const gap = 96,
-      ml = 60,
-      mr = 40,
+    const gap = 112,
+      ml = gap / 2 + 8,
+      mr = gap / 2 + 8,
       W = Math.max(el.clientWidth, ax.length * gap + ml + mr),
       step = (W - ml - mr) / (ax.length - 1),
-      top = 118,
-      bot = 44,
+      LH = 16, // высота строки названия
+      names = ax.map((d) => wrapPx(d.name, step - 16)),
+      nl = Math.max(...names.map((l) => l.length)),
+      top = 20 + nl * LH + 22, // шапка одинаковой высоты для всех осей
+      bot = 48,
       H = fs ? Math.max(460, innerHeight - 170) : 560,
       X = (i) => ml + i * step,
       Y = (t) => top + (1 - t) * (H - top - bot);
     let h = "";
     ax.forEach((d, i) => {
       h += `<line class="pc-axis" x1="${X(i)}" x2="${X(i)}" y1="${top}" y2="${H - bot}"/>`;
-      const lines = wrap(d.name, Math.max(8, Math.floor(step / 6.4)));
-      lines.forEach((t, n) => {
-        h += `<text class="pc-label" x="${X(i)}" y="${top - 18 - (lines.length - 1 - n) * 15}" text-anchor="middle">${esc(t)}</text>`;
+      // названия выровнены по верхней строке: у всех осей первая строка на одной высоте
+      names[i].forEach((t, n) => {
+        h += `<text class="pc-label" x="${X(i)}" y="${22 + n * LH}" text-anchor="middle">${esc(t)}</text>`;
       });
       if (d.unit)
         h += `<text class="pc-unit" x="${X(i)}" y="${H - bot + 22}" text-anchor="middle">${esc(d.unit)}</text>`;
@@ -124,7 +138,7 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
         : [0, 0.25, 0.5, 0.75, 1].map((q) => [q, fmt(d.lo + q * (d.hi - d.lo))]);
       for (const [q, text] of ticks) {
         const t = String(text),
-          short = t.length > 16 ? t.slice(0, 15) + "…" : t;
+          short = clip(t, step - 18);
         h += `<text class="pc-tick" x="${X(i) + 7}" y="${Y(q) + 4}" text-anchor="start"><title>${esc(t)}</title>${esc(short)}</text>`;
       }
     });
