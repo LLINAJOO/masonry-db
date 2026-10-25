@@ -123,7 +123,8 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
       H = fs ? Math.max(460, innerHeight - 170) : 560,
       X = (i) => ml + i * step,
       Y = (t) => top + (1 - t) * (H - top - bot);
-    let h = "";
+    let h = "",
+      tk = ""; // подписи значений рисуются после линий, чтобы линии их не перекрывали
     ax.forEach((d, i) => {
       h += `<line class="pc-axis" x1="${X(i)}" x2="${X(i)}" y1="${top}" y2="${H - bot}"/>`;
       // названия выровнены по верхней строке: у всех осей первая строка на одной высоте
@@ -138,7 +139,7 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
       for (const [q, text] of ticks) {
         const t = String(text),
           short = clip(t, step - 18);
-        h += `<text class="pc-tick" x="${X(i) + 7}" y="${Y(q) + 4}" text-anchor="start"><title>${esc(t)}</title>${esc(short)}</text>`;
+        tk += `<text class="pc-tick" x="${X(i) + 7}" y="${Y(q) + 4}" text-anchor="start"><title>${esc(t)}</title>${esc(short)}</text>`;
       }
     });
     // линии: прерываются там, где у записи нет значения
@@ -161,7 +162,7 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
     h =
       h.replace(/(<g class="pc-row sel"[\s\S]*?<\/g>)/, "") +
       (h.match(/<g class="pc-row sel"[\s\S]*?<\/g>/)?.[0] || "");
-    h += `<g class="pc-brushes"></g>`;
+    h += `<g class="pc-ticks">${tk}</g><g class="pc-brushes"></g>`;
     ax.forEach(
       (d, i) =>
         (h += `<rect class="pc-zone" data-ax="${d.k}" x="${X(i) - 14}" y="${top - 6}" width="28" height="${H - top - bot + 12}"/>`)
@@ -202,7 +203,7 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
       lines.forEach((x) => x.classList.remove("hot"));
       if (!g) return void (tip.hidden = true);
       g.classList.add("hot");
-      svg.insertBefore(g, svg.querySelector(".pc-brushes"));
+      svg.insertBefore(g, svg.querySelector(".pc-ticks"));
       const r = rows[+g.dataset.k];
       tip.innerHTML =
         `<b>№${r.no}</b> · ${esc(r.mtype)} · ${esc(r.btype)}<br>${esc(r.src)}` +
