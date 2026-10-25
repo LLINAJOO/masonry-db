@@ -1233,15 +1233,16 @@ a.nav.add {
     sans-serif;
 }
 .pc-tick {
-  fill: var(--muted);
+  fill: color-mix(in srgb, var(--fg) 88%, transparent);
   font:
-    500 11px Inter,
+    600 12px Inter,
     system-ui,
     sans-serif;
   paint-order: stroke;
   stroke: color-mix(in srgb, var(--fg) 5%, var(--bg));
-  stroke-width: 4px;
+  stroke-width: 5px;
   stroke-linejoin: round;
+  pointer-events: none;
 }
 .pc-line {
   fill: none;
