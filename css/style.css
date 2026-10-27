@@ -1647,3 +1647,142 @@ table.mini td {
     padding-top: 40px;
   }
 }
+
+/* ===== Телефон: крупные элементы управления, читаемые меню и шаги ===== */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+a,
+button,
+summary,
+label {
+  touch-action: manipulation;
+}
+input[type="file"] {
+  max-width: 100%;
+  font: inherit;
+  color: var(--muted);
+}
+input[type="file"]::file-selector-button {
+  margin-right: 12px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.swipe {
+  display: none;
+}
+@media (max-width: 900px) {
+  /* меню: три равные вкладки, без прокрутки и обрезанных подписей */
+  .links {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, auto));
+    justify-content: stretch;
+    overflow: visible;
+    gap: 6px;
+  }
+  .links .nav .more {
+    display: none;
+  }
+  aside a.nav,
+  a.nav.add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.45rem 0.4rem;
+    font-size: 0.92rem;
+    text-align: center;
+  }
+  /* поля ввода не меньше 16 px — иначе iPhone приближает страницу при нажатии */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .btn,
+  summary {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  main > h1 {
+    font-size: 1.6rem;
+    line-height: 1.2;
+  }
+  /* шаги добавления: активный шаг с названием, остальные кружками */
+  .stepper {
+    gap: 6px;
+  }
+  .stepper div {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+  }
+  .stepper div::before {
+    margin-right: 0;
+  }
+  .stepper .on {
+    flex: 1;
+  }
+  .stepper .on::before {
+    margin-right: 10px;
+  }
+  .stepper .on span {
+    display: inline;
+  }
+  /* вкладки записи: влезают в строку, при нехватке места прокручиваются */
+  .tabs {
+    gap: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .tabs button {
+    white-space: nowrap;
+    font-size: 0.86rem;
+    min-height: 44px;
+    padding: 0.5rem 0;
+  }
+  .swipe {
+    display: block;
+    margin-top: -4px;
+  }
+  .viewer {
+    padding: 14px 14px 18px;
+  }
+  footer {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (max-width: 480px) {
+  .acts {
+    flex-wrap: wrap;
+  }
+  .acts .btn {
+    flex: 1 1 140px;
+    justify-content: center;
+  }
+  .tile {
+    min-width: 0;
+    flex: 1 1 calc(50% - 6px);
+  }
+}
+@media (max-width: 400px) {
+  .links {
+    grid-template-columns: 1.35fr 1fr 1fr;
+    gap: 4px;
+  }
+  aside a.nav,
+  a.nav.add {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.2rem;
+  }
+}
