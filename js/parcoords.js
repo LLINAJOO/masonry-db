@@ -52,6 +52,7 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
     `<p class="hint">Каждая линия — одна запись. Проведите вдоль оси, чтобы выделить диапазон значений ` +
     `(клик по оси снимает выделение). Показываются записи, прошедшие поиск в таблице «Все записи» ниже; ` +
     `терракотовым цветом выделена запись, выбранная в таблице.</p>` +
+    `<p class="hint swipe">График шире экрана: листайте его вбок. Диапазон на оси выделяется движением пальца вдоль оси.</p>` +
     `<div class="ovmain"><div id="ovplot"></div><div id="tip" class="tip" hidden></div></div>`;
   const wrapEl = $(".ovmain", root),
     el = $("#ovplot", root),

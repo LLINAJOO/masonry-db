@@ -50,7 +50,7 @@ export function shell(page, title) {
       ([h, t, i]) =>
         `<a class="nav${h === page ? " on" : ""}" href="${ROOT}${h}">` + `${i}&nbsp; ${t}</a>`
     ).join("") +
-    `<a class="nav add${page === "add.html" ? " on" : ""}" href="${ROOT}add.html">＋&nbsp; Добавить эксперимент</a>` +
+    `<a class="nav add${page === "add.html" ? " on" : ""}" href="${ROOT}add.html">＋&nbsp; Добавить<span class="more"> эксперимент</span></a>` +
     `</nav>` +
     `<button class="nav" data-nav title="Скрыть боковую панель">‹&nbsp; Скрыть панель</button>` +
     `<div class="themerow"><span class="tg-ico">☀</span>` +
