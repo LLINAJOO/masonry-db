@@ -106,7 +106,7 @@ export function mountParcoords(root, { all, visible, columns, selected, axes }) 
       W = Math.max(el.clientWidth, ax.length * gap + ml + mr),
       step = (W - ml - mr) / (ax.length - 1),
       LH = 16, // высота строки названия
-      names = ax.map((d) => wrapPx(d.name, step - 16)),
+      names = ax.map((d) => wrapPx(d.name, Math.min(step - 16, gap - 16))), // не шире, чем в обычном режиме: иначе подпись крайней оси вылезает за край
       nl = Math.max(...names.map((l) => l.length)),
       top = 20 + nl * LH + 22, // шапка одинаковой высоты для всех осей
       bot = 48,
