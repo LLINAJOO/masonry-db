@@ -474,16 +474,27 @@ summary::-webkit-details-marker {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 12px 16px;
-  min-width: 250px;
+  min-width: 360px;
+  max-width: calc(100vw - 32px);
   box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.35);
 }
 .menu b {
   display: block;
   margin: 8px 0 2px;
 }
-.menu label {
-  display: block;
+.menu .mrow {
+  display: grid;
+  grid-template-columns: 1fr 52px 52px;
+  align-items: center;
   font-size: 0.9rem;
+}
+.menu .mrow input {
+  justify-self: center;
+}
+.menu .mhead {
+  font-size: 0.78rem;
+  color: var(--muted, #6b7178);
+  text-align: center;
 }
 .tw {
   max-height: 520px;
