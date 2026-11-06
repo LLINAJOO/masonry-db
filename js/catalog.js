@@ -171,7 +171,7 @@ async function init() {
     `<p class="hint">Нажмите на строку, чтобы открыть запись. Сортировка — по заголовку столбца, поиск — над таблицей. Те же записи показаны на графике во вкладке «Обзор».</p>` +
     `<div id="tblbox"><div class="bar"><input id="q" type="search" placeholder="Поиск по всем столбцам…">` +
     `<button id="reset" class="btn" hidden>Сбросить</button>` +
-    `<details class="pop"><summary>Столбцы</summary><div class="menu">${GROUPS.map(
+    `<details class="pop"><summary>Столбцы</summary><div class="menu"><b>График</b><label><input type="checkbox" data-c="no"${state.hidden.has("no") ? "" : " checked"}> Номер записи (ось графика)</label>${GROUPS.map(
       (g) =>
         `<b>${g}</b>` +
         COLS.filter((c) => c.group === g)
@@ -189,6 +189,11 @@ async function init() {
     visible: view,
     selected: () => state.id,
     columns: COLS,
+    // оси графика = отмеченные столбцы (источник — текст-ссылка, осью не бывает)
+    axes: () => [
+      ...(state.hidden.has("no") ? [] : ["no"]),
+      ...COLS.filter((c) => c.k !== "src" && !state.hidden.has(c.k)).map((c) => c.k),
+    ],
   });
   addFullscreen($("#tblbox"));
 
