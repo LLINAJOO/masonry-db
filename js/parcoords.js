@@ -4,22 +4,6 @@ import { $, esc, addFullscreen } from "./common.js";
 import { show } from "./data.js";
 
 const SVGNS = "http://www.w3.org/2000/svg";
-// оси графика, слева направо (ключи столбцов из data.js; «no» — номер записи)
-const AXES = [
-  "no",
-  "mtype",
-  "btype",
-  "joint",
-  "mt_sig",
-  "mt_alp",
-  "bdens",
-  "void",
-  "perim",
-  "mdens",
-  "mE",
-  "mstrain",
-  "mstress",
-];
 const fmt = (v) => {
   const a = Math.abs(v);
   return String(a >= 100 || Number.isInteger(v) ? Math.round(v * 10) / 10 : +v.toPrecision(2));
@@ -47,11 +31,12 @@ const clip = (t, max) => {
   return t.slice(0, n) + "…";
 };
 
-export function mountParcoords(root, { all, visible, columns, selected }) {
+// axes() → ключи столбцов, которые сейчас отмечены в списке «Столбцы» («no» — номер записи)
+export function mountParcoords(root, { all, visible, columns, selected, axes }) {
   root.innerHTML =
     `<p class="hint">Каждая линия — одна запись. Проведите вдоль оси, чтобы выделить диапазон значений ` +
-    `(клик по оси снимает выделение). Показываются записи, прошедшие поиск в таблице «Все записи» ниже; ` +
-    `терракотовым цветом выделена запись, выбранная в таблице.</p>` +
+    `(клик по оси снимает выделение). Оси — это столбцы, отмеченные в списке «Столбцы» под графиком; ` +
+    `показываются записи, прошедшие поиск в таблице «Все записи» ниже, терракотовым цветом выделена выбранная запись.</p>` +
     `<p class="hint swipe">График шире экрана: листайте его вбок. Диапазон на оси выделяется движением пальца вдоль оси.</p>` +
     `<div class="ovmain"><div id="ovplot"></div><div id="tip" class="tip" hidden></div></div>`;
   const wrapEl = $(".ovmain", root),
@@ -62,7 +47,7 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
   // оси строятся один раз для всей базы, поэтому не «прыгают» при фильтрации
   const defs = () => {
     const rows = all();
-    return AXES.map((k) => {
+    return axes().map((k) => {
       const c =
         k === "no"
           ? { k, name: "Номер записи", unit: "", type: "num", get: (r) => [r.no] }
@@ -107,6 +92,10 @@ export function mountParcoords(root, { all, visible, columns, selected }) {
       rows = visible(),
       ax = defs(),
       fs = !!document.querySelector(".fsbox.fs");
+    if (ax.length < 2) {
+      el.innerHTML = `<div class="empty"><h3>Мало осей</h3>Отметьте в списке «Столбцы» (под графиком) хотя бы два столбца с данными.</div>`;
+      return;
+    }
     if (!rows.length) {
       el.innerHTML = `<div class="empty"><h3>Ничего не выбрано</h3>Под поиск в таблице не подходит ни одна запись.</div>`;
       return;
