@@ -15,6 +15,8 @@ const state = {
   sort: null, // { k, dir: 1 | -1 }
   filters: {}, // k → { ex: Set } | { min, max } | { text }
   hidden: new Set(COLS.filter((c) => c.off).map((c) => c.k)),
+  // оси графика «Обзор» (порядок слева направо); по умолчанию — прежний набор, дальше настраивает пользователь
+  axes: new Set(["no", "mtype", "btype", "joint", "mt_sig", "mt_alp", "bdens", "void", "perim", "mdens", "mE", "mstrain", "mstress"]),
 };
 const ALL = { k: "no", label: "№", type: "num", get: (r) => [r.no] };
 const colOf = (k) => (k === "no" ? ALL : COLS.find((c) => c.k === k));
@@ -171,13 +173,15 @@ async function init() {
     `<p class="hint">Нажмите на строку, чтобы открыть запись. Сортировка — по заголовку столбца, поиск — над таблицей. Те же записи показаны на графике во вкладке «Обзор».</p>` +
     `<div id="tblbox"><div class="bar"><input id="q" type="search" placeholder="Поиск по всем столбцам…">` +
     `<button id="reset" class="btn" hidden>Сбросить</button>` +
-    `<details class="pop"><summary>Столбцы</summary><div class="menu"><b>График</b><label><input type="checkbox" data-c="no"${state.hidden.has("no") ? "" : " checked"}> Номер записи (ось графика)</label>${GROUPS.map(
+    `<details class="pop"><summary>Столбцы</summary><div class="menu"><div class="mrow mhead"><span></span><span>Таблица</span><span>График</span></div><div class="mrow"><span class="mt">Номер записи</span><span></span><input type="checkbox" data-a="no" title="Показать ось на графике"${state.axes.has("no") ? " checked" : ""}></div>${GROUPS.map(
       (g) =>
         `<b>${g}</b>` +
         COLS.filter((c) => c.group === g)
           .map(
             (c) =>
-              `<label><input type="checkbox" data-c="${c.k}"${state.hidden.has(c.k) ? "" : " checked"}> ${esc(c.label)}</label>`
+              `<div class="mrow"><span class="mt">${esc(c.label)}</span><input type="checkbox" data-c="${c.k}"${state.hidden.has(c.k) ? "" : " checked"} title="Показать в таблице">` +
+              (c.k === "src" ? `<span></span>` : `<input type="checkbox" data-a="${c.k}"${state.axes.has(c.k) ? " checked" : ""} title="Показать ось на графике">`) +
+              `</div>`
           )
           .join("")
     ).join("")}</div></details><button id="tdl" class="btn">Скачать CSV</button></div>` +
@@ -189,11 +193,7 @@ async function init() {
     visible: view,
     selected: () => state.id,
     columns: COLS,
-    // оси графика = отмеченные столбцы (источник — текст-ссылка, осью не бывает)
-    axes: () => [
-      ...(state.hidden.has("no") ? [] : ["no"]),
-      ...COLS.filter((c) => c.k !== "src" && !state.hidden.has(c.k)).map((c) => c.k),
-    ],
+    axes: () => [...state.axes],
   });
   addFullscreen($("#tblbox"));
 
@@ -211,6 +211,13 @@ async function init() {
     $("#q").value = "";
     renderTable();
   };
+  document.querySelectorAll("[data-a]").forEach(
+    (c) =>
+      (c.onchange = () => {
+        c.checked ? state.axes.add(c.dataset.a) : state.axes.delete(c.dataset.a);
+        overview.redraw();
+      })
+  );
   document.querySelectorAll("[data-c]").forEach(
     (c) =>
       (c.onchange = () => {

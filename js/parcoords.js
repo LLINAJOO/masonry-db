@@ -35,7 +35,7 @@ const clip = (t, max) => {
 export function mountParcoords(root, { all, visible, columns, selected, axes }) {
   root.innerHTML =
     `<p class="hint">Каждая линия — одна запись. Проведите вдоль оси, чтобы выделить диапазон значений ` +
-    `(клик по оси снимает выделение). Оси — это столбцы, отмеченные в списке «Столбцы» под графиком; ` +
+    `(клик по оси снимает выделение). Набор осей настраивается в списке «Столбцы» под графиком (колонка «График»); ` +
     `показываются записи, прошедшие поиск в таблице «Все записи» ниже, терракотовым цветом выделена выбранная запись.</p>` +
     `<p class="hint swipe">График шире экрана: листайте его вбок. Диапазон на оси выделяется движением пальца вдоль оси.</p>` +
     `<div class="ovmain"><div id="ovplot"></div><div id="tip" class="tip" hidden></div></div>`;
@@ -93,7 +93,7 @@ export function mountParcoords(root, { all, visible, columns, selected, axes }) 
       ax = defs(),
       fs = !!document.querySelector(".fsbox.fs");
     if (ax.length < 2) {
-      el.innerHTML = `<div class="empty"><h3>Мало осей</h3>Отметьте в списке «Столбцы» (под графиком) хотя бы два столбца с данными.</div>`;
+      el.innerHTML = `<div class="empty"><h3>Мало осей</h3>Отметьте в списке «Столбцы» (колонка «График») хотя бы два столбца с данными.</div>`;
       return;
     }
     if (!rows.length) {
